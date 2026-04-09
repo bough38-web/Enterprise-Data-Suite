@@ -97,7 +97,7 @@ class EasyMatchPro(tk.Tk):
         if not self.config_path.exists():
             self.config = {
                 "locked_features": {"batch_tab": False, "cleaner_tab": False, "cloud_source": False, "google_sheets": False},
-                "branding": {"name": "EasyMatch", "version": "v3.6 Pro", "theme": "dark"},
+                "branding": {"name": "EasyMatch", "version": "v3.9 Pro Official", "theme": "dark"},
                 "telemetry": {"enabled": false, "url": ""}
             }
         else:
@@ -223,7 +223,7 @@ class EasyMatchPro(tk.Tk):
         header = ttk.Frame(header_container)
         header.pack(side="left")
         ttk.Label(header, text="이지매치", style="Header.TLabel").pack(side="left")
-        ttk.Label(header, text="EasyMatch Pro", foreground="#00E5FF", font=("Segoe UI", 10, "bold")).pack(side="left", padx=10, pady=(5,0))
+        ttk.Label(header, text="EasyMatch Pro", foreground="#00E5FF", font=("Segoe UI", 11, "bold")).pack(side="left", padx=10, pady=(5,0))
         
         # Settings & Theme Buttons
         btn_frame = ttk.Frame(header_container)
@@ -254,11 +254,39 @@ class EasyMatchPro(tk.Tk):
 
         self.tab_match.register_on_load(self.on_data_loaded)
 
-        # Footer
-        footer = ttk.Frame(self, padding=10)
+        # Footer & Pulse System
+        footer = ttk.Frame(self, padding=(20, 10))
         footer.pack(fill="x", side="bottom")
-        ttk.Label(footer, text="EasyMatch Professional Edition | All Rights Reserved", 
-                  font=("Segoe UI", 8), foreground="gray").pack(side="right")
+        
+        # Pulse (Satisfaction) Bar
+        pulse_frame = ttk.Frame(footer)
+        pulse_frame.pack(side="left")
+        
+        ttk.Label(pulse_frame, text="EasyMatch Pulse:", font=("Segoe UI", 9, "italic")).pack(side="left", padx=(0, 10))
+        
+        self.like_btn = ttk.Button(pulse_frame, text="❤️ 좋아요", width=10, command=self.send_pulse_like)
+        self.like_btn.pack(side="left", padx=2)
+        
+        ttk.Button(pulse_frame, text="💬 리뷰/건의", width=12, command=self.open_feedback_popup).pack(side="left", padx=2)
+        
+        ttk.Label(footer, text="Professional Edition | Optimized for Extreme Data", 
+                  font=("Segoe UI", 9), foreground="gray").pack(side="right")
+
+    def send_pulse_like(self):
+        tel_cfg = self.config.get('telemetry', {})
+        if tel_cfg.get('enabled'):
+            TelemetryManager.log_event(tel_cfg.get('url'), "PULSE_LIKE", user_info=self.config.get('user_info'))
+            self.like_btn.config(text="💖 감사!!", state="disabled")
+            messagebox.showinfo("EasyMatch Pulse", "개발자에게 큰 힘이 됩니다. 감사합니다! ❤️")
+
+    def open_feedback_popup(self):
+        msg = tk.simpledialog.askstring("EasyMatch Feedback", "개발자에게 의견을 보내주세요 (100자 내외):")
+        if not msg: return
+        
+        tel_cfg = self.config.get('telemetry', {})
+        if tel_cfg.get('enabled'):
+            TelemetryManager.log_event(tel_cfg.get('url'), "PULSE_REVIEW", {"msg": msg}, user_info=self.config.get('user_info'))
+            messagebox.showinfo("EasyMatch Pulse", "소중한 의견 감사합니다! 품질 개선에 반영하겠습니다.")
 
     def open_admin_settings(self):
         AdminSettingsPopup(self)
