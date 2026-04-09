@@ -6,7 +6,7 @@ from utils.license_manager import LicenseManager
 
 class TelemetryManager:
     @staticmethod
-    def log_event(url, event_type, details=None):
+    def log_event(url, event_type, details=None, user_info=None):
         """Send a telemetry event to the remote webhook asynchronously."""
         if not url: return
 
@@ -16,6 +16,7 @@ class TelemetryManager:
                     "mid": LicenseManager.get_machine_id(),
                     "timestamp": datetime.datetime.now().isoformat(),
                     "event": event_type,
+                    "user": user_info or {},
                     "details": details or {}
                 }
                 # Silent post with timeout

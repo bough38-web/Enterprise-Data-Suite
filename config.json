@@ -7,12 +7,12 @@
     },
     "branding": {
         "name": "EasyMatch",
-        "version": "v3.6 Pro",
+        "version": "v3.7 Pro",
         "theme": "dark"
     },
     "telemetry": {
-        "enabled": false,
-        "url": ""
+        "enabled": true,
+        "url": "https://script.google.com/macros/s/AKfycbx10peXFFkDrBkWwf_qJIFO_QDVHie8Aq01LA6Sd5PXCmdQSao8lwKj_3LuJQdYU8LV/exec"
     },
     "license_key": ""
 }

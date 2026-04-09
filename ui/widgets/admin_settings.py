@@ -77,6 +77,10 @@ class AdminSettingsPopup(tk.Toplevel):
         
         # Current Machine Info
         mid = LicenseManager.get_machine_id()
+        u_info = self.config.get('user_info', {})
+        u_str = f"{u_info.get('name', '미등록')} ({u_info.get('email', '-')})"
+        
+        ttk.Label(main, text=f"등록 사용자: {u_str}", foreground="#00E5FF", font=("Segoe UI", 9, "bold")).pack(anchor="w")
         ttk.Label(main, text=f"이 기기 ID: {mid}", foreground="gray", font=("Segoe UI", 8)).pack(anchor="w")
         
         # Key Generator

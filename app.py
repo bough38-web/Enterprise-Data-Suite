@@ -129,14 +129,14 @@ class EasyMatchPro(tk.Tk):
         mid = LicenseManager.get_machine_id()
         gate = tk.Toplevel(self)
         gate.title("EasyMatch License Verification")
-        gate.geometry("500x450")
+        gate.geometry("500x550")
         gate.resizable(False, False)
         gate.grab_set()
         
         # Center Gate
         sw = self.winfo_screenwidth()
         sh = self.winfo_screenheight()
-        gate.geometry(f"500x450+{sw//2-250}+{sh//2-225}")
+        gate.geometry(f"500x550+{sw//2-250}+{sh//2-275}")
         
         # UI
         main = ttk.Frame(gate, padding=30)
@@ -160,22 +160,38 @@ class EasyMatchPro(tk.Tk):
         
         ttk.Button(id_frame, text="복사", width=5, command=copy_id).pack(side="right", padx=5)
 
-        ttk.Separator(main, orient="horizontal").pack(fill="x", pady=20)
+        ttk.Separator(main, orient="horizontal").pack(fill="x", pady=15)
         
-        ttk.Label(main, text="라이센스 키 입력:", font=("Segoe UI", 10, "bold")).pack(anchor="w")
+        ttk.Label(main, text="사용자 성함:", font=("Segoe UI", 10, "bold")).pack(anchor="w")
+        name_var = tk.StringVar()
+        ttk.Entry(main, textvariable=name_var, font=("Segoe UI", 11)).pack(fill="x", pady=2)
+        
+        ttk.Label(main, text="이메일 주소 (AS 및 기술지원 용):", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(10, 0))
+        email_var = tk.StringVar()
+        ttk.Entry(main, textvariable=email_var, font=("Segoe UI", 11)).pack(fill="x", pady=2)
+
+        ttk.Label(main, text="라이센스 키 입력:", font=("Segoe UI", 10, "bold")).pack(anchor="w", pady=(10, 0))
         key_var = tk.StringVar()
-        key_entry = ttk.Entry(main, textvariable=key_var, font=("Consolas", 12), justify="center")
-        key_entry.pack(fill="x", pady=10)
+        key_entry = ttk.Entry(main, textvariable=key_var, font=("Consolas", 11), justify="center")
+        key_entry.pack(fill="x", pady=5)
         
         def verify():
             provided = key_var.get().strip()
+            u_name = name_var.get().strip()
+            u_email = email_var.get().strip()
+            
+            if not u_name or not u_email:
+                messagebox.showwarning("경고", "성함과 이메일을 입력하세요.")
+                return
+
             if LicenseManager.verify_key(mid, provided):
                 self.config['license_key'] = provided
+                self.config['user_info'] = {"name": u_name, "email": u_email}
                 
                 # Ping Activation
                 tel_cfg = self.config.get('telemetry', {})
                 if tel_cfg.get('enabled'):
-                    TelemetryManager.log_event(tel_cfg.get('url'), "LICENSE_ACTIVATE")
+                    TelemetryManager.log_event(tel_cfg.get('url'), "LICENSE_ACTIVATE", user_info=self.config['user_info'])
                 
                 with open(self.config_path, 'w', encoding='utf-8') as f:
                     json.dump(self.config, f, indent=4, ensure_ascii=False)
@@ -197,7 +213,7 @@ class EasyMatchPro(tk.Tk):
         # Ping App Start
         tel_cfg = self.config.get('telemetry', {})
         if tel_cfg.get('enabled'):
-            TelemetryManager.log_event(tel_cfg.get('url'), "APP_START")
+            TelemetryManager.log_event(tel_cfg.get('url'), "APP_START", user_info=self.config.get('user_info'))
 
     def build_ui(self):
         # Header
