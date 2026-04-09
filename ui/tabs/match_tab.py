@@ -145,8 +145,26 @@ class MatchTab(ttk.Frame):
         ttk.Button(f_btns, text="삭제", command=self.remove_filter_rule).pack(side="left", padx=2)
         ttk.Button(f_btns, text="초기화", command=self.clear_all_filters).pack(side="left", padx=2)
 
-        # 5. Action
-        self.run_btn = ttk.Button(ctrl_frame, text="추출 및 저장 실행", command=self.run_process)
+        # 5. Presets (Moved here for prominence)
+        pre_lf = ttk.LabelFrame(ctrl_frame, text="추출 프리셋 저장/관리", padding=10)
+        pre_lf.pack(fill="x", pady=(0, 10))
+        
+        pre_top = ttk.Frame(pre_lf)
+        pre_top.pack(fill="x")
+        self.preset_var = tk.StringVar()
+        self.preset_combo = ttk.Combobox(pre_top, textvariable=self.preset_var, state="readonly")
+        self.preset_combo.pack(side="left", expand=True, fill="x", padx=(0, 5))
+        self.preset_combo.bind("<<ComboboxSelected>>", self.apply_preset)
+        
+        ttk.Button(pre_top, text="적용", command=self.apply_preset, width=5).pack(side="right")
+
+        pre_btns = ttk.Frame(pre_lf)
+        pre_btns.pack(fill="x", pady=(5, 0))
+        ttk.Button(pre_btns, text="+ 현재 조건 저장", command=self.save_current_preset).pack(side="left", expand=True, fill="x", padx=2)
+        ttk.Button(pre_btns, text="🔔 관리", command=self.manage_presets_ui).pack(side="left", expand=True, fill="x", padx=2)
+
+        # 6. Action
+        self.run_btn = ttk.Button(ctrl_frame, text="추출 및 저장 실행", command=self.run_process, style="Accent.TButton")
         self.run_btn.pack(fill="x", pady=10)
 
         # 6. Columns
@@ -295,7 +313,85 @@ class MatchTab(ttk.Frame):
     def load_presets_list(self):
         if self.presets_file.exists():
             with open(self.presets_file, 'r', encoding='utf-8') as f:
-                self.preset_list['values'] = list(json.load(f).keys())
+                self.preset_combo['values'] = list(json.load(f).keys())
+
+    def save_current_preset(self):
+        name = simpledialog.askstring("프리셋 저장", "새 프리셋 이름을 입력하세요:")
+        if not name: return
+        
+        # Capture state
+        current_cols = [c for c, v in self.col_vars.items() if v.get()]
+        preset_data = {
+            "columns": current_cols,
+            "filters": self.active_filters,
+            "mode": self.mode_var.get(),
+            "auto_target": self.auto_target.get()
+        }
+        
+        presets = {}
+        if self.presets_file.exists():
+            with open(self.presets_file, 'r', encoding='utf-8') as f:
+                presets = json.load(f)
+        
+        presets[name] = preset_data
+        with open(self.presets_file, 'w', encoding='utf-8') as f:
+            json.dump(presets, f, indent=4, ensure_ascii=False)
+            
+        self.load_presets_list()
+        messagebox.showinfo("완료", f"'{name}' 프리셋이 저장되었습니다.")
+
+    def apply_preset(self, event=None):
+        name = self.preset_var.get()
+        if not name or not self.presets_file.exists(): return
+        
+        with open(self.presets_file, 'r', encoding='utf-8') as f:
+            presets = json.load(f)
+            p = presets.get(name)
+            if not p: return
+            
+            # Apply Columns
+            for col, var in self.col_vars.items():
+                var.set(col in p.get('columns', []))
+            
+            # Apply Filters
+            self.active_filters = p.get('filters', [])
+            self.update_filter_listbox()
+            self.mode_var.set(p.get('mode', 'keep'))
+            self.auto_target.set(p.get('auto_target', True))
+            
+        self.set_info(f"프리셋 적용: {name}")
+
+    def manage_presets_ui(self):
+        if not self.presets_file.exists(): return
+        
+        popup = tk.Toplevel(self)
+        popup.title("프리셋 관리")
+        popup.geometry("300x400")
+        popup.grab_set()
+        
+        ttk.Label(popup, text="저장된 프리셋 목록", font=("Segoe UI", 10, "bold")).pack(pady=10)
+        
+        lb = tk.Listbox(popup)
+        lb.pack(fill="both", expand=True, padx=10, pady=5)
+        
+        with open(self.presets_file, 'r', encoding='utf-8') as f:
+            presets = json.load(f)
+            for name in presets.keys():
+                lb.insert(tk.END, name)
+        
+        def delete_selected():
+            sel = lb.curselection()
+            if not sel: return
+            name = lb.get(sel[0])
+            if messagebox.askyesno("삭제 확인", f"'{name}' 프리셋을 삭제할까요?"):
+                del presets[name]
+                with open(self.presets_file, 'w', encoding='utf-8') as f:
+                    json.dump(presets, f, indent=4, ensure_ascii=False)
+                lb.delete(sel[0])
+                self.load_presets_list()
+        
+        ttk.Button(popup, text="삭제", command=delete_selected).pack(fill="x", padx=10, pady=10)
+        ttk.Button(popup, text="닫기", command=popup.destroy).pack(fill="x", padx=10, pady=(0, 10))
 
     def run_process(self):
         if self.df_left is None: return

@@ -1,0 +1,13 @@
+{
+    "locked_features": {
+        "batch_tab": false,
+        "cleaner_tab": false,
+        "cloud_source": false,
+        "google_sheets": false
+    },
+    "branding": {
+        "name": "EasyMatch",
+        "version": "3.5 Pro",
+        "theme": "dark"
+    }
+}

@@ -9,3 +9,4 @@ sv-ttk
 matplotlib
 thefuzz
 python-Levenshtein
+Pillow
