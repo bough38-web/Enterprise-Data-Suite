@@ -16,13 +16,13 @@ class StatsTab(ttk.Frame):
 
         header = ttk.Frame(main)
         header.pack(fill="x", pady=(0, 20))
-        ttk.Label(header, text="데이터 통계 분석 (Data Insights)", font=("Segoe UI", 12, "bold")).pack(side="left")
+        ttk.Label(header, text="데이터 통계 분석 (Data Insights)", font=("System", 12, "bold")).pack(side="left")
 
         # Stats Summary
         self.summary_frame = ttk.LabelFrame(main, text="기본 정보", padding=15)
         self.summary_frame.pack(fill="x", pady=(0, 20))
         
-        self.stats_label = ttk.Label(self.summary_frame, text="데이터를 먼저 로드해 주세요.", font=("Segoe UI", 10))
+        self.stats_label = ttk.Label(self.summary_frame, text="데이터를 먼저 로드해 주세요.", font=("System", 10))
         self.stats_label.pack(anchor="w")
 
         # Chart Section
@@ -50,9 +50,9 @@ class StatsTab(ttk.Frame):
             missing = df.isnull().sum().sum()
             
             summary_txt = (
-                f"• 전체 행 수: {total_rows:,}건\n"
-                f"• 컬럼 수: {total_cols}개\n"
-                f"• 결측치(빈 칸): {missing:,}개"
+                f"- 전체 행 수: {total_rows:,}건\n"
+                f"- 컬럼 수: {total_cols}개\n"
+                f"- 결측치(빈 칸): {missing:,}개"
             )
             self.stats_label.config(text=summary_txt)
             
@@ -73,11 +73,46 @@ class StatsTab(ttk.Frame):
 
         # Generate Plot
         fig, ax = plt.subplots(figsize=(6, 4))
-        plt.rcParams['font.family'] = 'Segoe UI' # fallback fonts
         
+        # Cross-platform Korean Font Fix
+        import platform
+        sys_plat = platform.system()
+        if sys_plat == "Darwin":
+            plt.rcParams['font.family'] = 'AppleGothic'
+        elif sys_plat == "Windows":
+            plt.rcParams['font.family'] = 'Malgun Gothic'
+        else:
+            plt.rcParams['font.family'] = 'NanumGothic'
+            
+        plt.rcParams['axes.unicode_minus'] = False
+
+        
+        # Apply Theme Colors to Chart
+        theme = "dark" # Default
+        try:
+            root = self.winfo_toplevel()
+            if hasattr(root, 'config'):
+                theme = root.config['branding'].get('theme', 'dark')
+        except: pass
+        
+        bg_color = "#1e1e1e" if theme in ["dark", "cosmic", "graphite"] else "#ffffff"
+        fg_color = "white" if theme in ["dark", "cosmic", "graphite"] else "black"
+        accent_color = "#0078D4"
+        if theme == "cosmic": accent_color = "#BB86FC"
+        elif theme == "graphite": accent_color = "#888888"
+        
+        fig.patch.set_facecolor(bg_color)
+        ax.set_facecolor(bg_color)
+        ax.tick_params(colors=fg_color, which='both')
+        ax.xaxis.label.set_color(fg_color)
+        ax.yaxis.label.set_color(fg_color)
+        ax.title.set_color(fg_color)
+        for spine in ax.spines.values():
+            spine.set_edgecolor(fg_color)
+            
         counts = self.df[col].value_counts().head(10)
-        counts.plot(kind='bar', ax=ax, color='#0078D4')
-        ax.set_title(f"[{col}] 상위 10개 분포", fontsize=10)
+        counts.plot(kind='bar', ax=ax, color=accent_color)
+        ax.set_title(f"[{col}] 상위 10개 분포", fontsize=10, pad=15)
         ax.tick_params(axis='x', rotation=45, labelsize=8)
         
         # Adjust layout
@@ -87,3 +122,8 @@ class StatsTab(ttk.Frame):
         self.canvas = FigureCanvasTkAgg(fig, master=self.chart_container)
         self.canvas.draw()
         self.canvas.get_tk_widget().pack(fill="both", expand=True)
+
+    def update_theme(self, theme_name):
+        """Called by app.py when theme changes to refresh chart colors."""
+        self.update_chart()
+

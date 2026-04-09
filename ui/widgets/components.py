@@ -35,7 +35,7 @@ class ValueFilterPopup:
         main = ttk.Frame(self.top, padding=12)
         main.pack(fill="both", expand=True)
 
-        ttk.Label(main, text=title, font=("Segoe UI", 11, "bold")).pack(anchor="w", pady=(0, 10))
+        ttk.Label(main, text=title, font=("System", 11, "bold")).pack(anchor="w", pady=(0, 10))
 
         # Search box
         search_frame = ttk.Frame(main)
@@ -108,7 +108,7 @@ class SheetSelectPopup:
         frame = ttk.Frame(self.top, padding=20)
         frame.pack(fill="both", expand=True)
 
-        ttk.Label(frame, text="작업할 시트를 선택하세요:", font=("Segoe UI", 10)).pack(anchor="w", pady=(0, 10))
+        ttk.Label(frame, text="작업할 시트를 선택하세요:", font=("System", 10)).pack(anchor="w", pady=(0, 10))
         
         self.var = tk.StringVar(value=sheet_names[0] if sheet_names else "")
         combo = ttk.Combobox(frame, textvariable=self.var, values=sheet_names, state="readonly")
@@ -138,10 +138,10 @@ class HelpPopup:
 
         header = ttk.Frame(main)
         header.pack(fill="x", pady=(0, 10))
-        ttk.Label(header, text=title, font=("Segoe UI", 12, "bold"), foreground="#0078D4").pack(side="left")
+        ttk.Label(header, text=title, font=("System", 12, "bold"), foreground="#0078D4").pack(side="left")
 
         # Use a text widget for multi-line content
-        txt = tk.Text(main, wrap="word", font=("Segoe UI", 10), bg="#F5F5F5", relief="flat", padx=10, pady=10)
+        txt = tk.Text(main, wrap="word", font=("System", 10), bg="#F5F5F5", relief="flat", padx=10, pady=10)
         txt.insert("1.0", content)
         txt.config(state="disabled")
         txt.pack(fill="both", expand=True)
@@ -160,6 +160,6 @@ class HelpPopup:
 def create_help_btn(parent, title, content):
     """Helper to create a consistent '?' button that launches a HelpPopup."""
     btn = ttk.Label(parent, text="?", background="#E1E1E1", foreground="#666666", 
-                    font=("Segoe UI", 9, "bold"), cursor="hand2", padding=(4, 0))
+                    font=("System", 9, "bold"), cursor="hand2", padding=(4, 0))
     btn.bind("<Button-1>", lambda e: HelpPopup(parent.winfo_toplevel(), title, content))
     return btn

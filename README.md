@@ -2,7 +2,7 @@
 
 **Enterprise Data Management Suite** is a high-performance Python application designed for processing, matching, and cleaning large-scale Excel and CSV datasets. Optimized for stability and speed, it can handle over **900,000+ rows** with ease.
 
-## 🚀 Key Features
+## [GO] Key Features
 
 - **High-Speed Processing**: Uses vectorized operations (`pandas` + `numpy`) to process large datasets in seconds.
 - **Ultra-Large Data Mode**: "Direct Save" bypasses slow Excel automation to output massive results directly to CSV/XLSX.
@@ -39,7 +39,7 @@ python3 app.py
 
 ---
 
-## 📂 Project Structure
+## [OPEN] Project Structure
 
 - `app.py`: Main entry point.
 - `ui/`: UI components and tab definitions.

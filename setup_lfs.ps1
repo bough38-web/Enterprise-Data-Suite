@@ -1,6 +1,6 @@
 # Git LFS (Large File Storage) 초기화 및 데이터 트래킹 설정 스크립트
 
-echo "🚀 Git LFS 설정을 시작합니다..."
+echo "[GO] Git LFS 설정을 시작합니다..."
 
 # 1. Git LFS 설치 확인 및 초기화
 try {
@@ -13,7 +13,7 @@ try {
 }
 
 # 2. 대용량 파일 타입 추적 시작
-echo "📂 데이터 파일 추적을 시작합니다 (*.xlsx, *.csv)..."
+echo "[OPEN] 데이터 파일 추적을 시작합니다 (*.xlsx, *.csv)..."
 git lfs track "*.xlsx"
 git lfs track "*.csv"
 

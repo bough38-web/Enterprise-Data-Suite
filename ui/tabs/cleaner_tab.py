@@ -15,7 +15,7 @@ class CleanerTab(ttk.Frame):
         main = ttk.Frame(self, padding=20)
         main.pack(fill="both", expand=True)
 
-        ttk.Label(main, text="데이터 품질 관리 (Data Quality & Cleaning)", font=("Segoe UI", 12, "bold")).pack(anchor="w", pady=(0, 20))
+        ttk.Label(main, text="데이터 품질 관리 (Data Quality & Cleaning)", font=("System", 12, "bold")).pack(anchor="w", pady=(0, 20))
 
         # Source Selection
         src_frame = ttk.LabelFrame(main, text="작업 데이터 소스", padding=15)
@@ -33,8 +33,8 @@ class CleanerTab(ttk.Frame):
         dedup_lf = ttk.LabelFrame(tools_frame, text="중복 제거", padding=15)
         dedup_lf.grid(row=0, column=0, sticky="nsew", padx=5, pady=5)
         create_help_btn(dedup_lf, "중복 제거 가이드", 
-            "• 기준 컬럼: 중복 여부를 판단할 기둥이 되는 컬럼을 선택합니다.\n"
-            "• 선택하지 않으면 행 전체가 동일한 경우에만 삭제됩니다.").place(relx=1.0, x=-5, y=-5, anchor="ne")
+            "- 기준 컬럼: 중복 여부를 판단할 기둥이 되는 컬럼을 선택합니다.\n"
+            "- 선택하지 않으면 행 전체가 동일한 경우에만 삭제됩니다.").place(relx=1.0, x=-5, y=-5, anchor="ne")
         
         ttk.Label(dedup_lf, text="기준 컬럼:").pack(anchor="w")
         self.dedup_col_combo = ttk.Combobox(dedup_lf, state="readonly")
@@ -45,8 +45,8 @@ class CleanerTab(ttk.Frame):
         std_lf = ttk.LabelFrame(tools_frame, text="텍스트 표준화", padding=15)
         std_lf.grid(row=0, column=1, sticky="nsew", padx=5, pady=5)
         create_help_btn(std_lf, "텍스트 정리 가이드", 
-            "• 공백 제거: 모든 텍스트 컬럼의 앞뒤 빈 칸을 없앱니다.\n"
-            "• 전화번호 정규화: '010-1234-5678'을 '01012345678'로 통일하여 매칭율을 높입니다.").place(relx=1.0, x=-5, y=-5, anchor="ne")
+            "- 공백 제거: 모든 텍스트 컬럼의 앞뒤 빈 칸을 없앱니다.\n"
+            "- 전화번호 정규화: '010-1234-5678'을 '01012345678'로 통일하여 매칭율을 높입니다.").place(relx=1.0, x=-5, y=-5, anchor="ne")
         
         self.trim_space = tk.BooleanVar(value=True)
         ttk.Checkbutton(std_lf, text="앞뒤 공백 제거 (Trim)", variable=self.trim_space).pack(anchor="w")

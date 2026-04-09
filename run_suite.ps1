@@ -6,11 +6,11 @@
 # }
 
 # 2. 필수 라이브러리 설치 확인
-Write-Host "🔍 라이브러리 설치 여부를 확인합니다..." -ForegroundColor Cyan
+Write-Host "[SCAN] 라이브러리 설치 여부를 확인합니다..." -ForegroundColor Cyan
 pip install -r requirements.txt --quiet
 
 # 3. 프로그램 실행
-Write-Host "🚀 프로그램을 실행합니다..." -ForegroundColor Green
+Write-Host "[GO] 프로그램을 실행합니다..." -ForegroundColor Green
 python .\app.py
 
 if ($LASTEXITCODE -ne 0) {

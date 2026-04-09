@@ -20,14 +20,14 @@ class BatchTab(ttk.Frame):
         main = ttk.Frame(self, padding=20)
         main.pack(fill="both", expand=True)
 
-        ttk.Label(main, text="폴더 일괄 처리 (Batch Folder Processing)", font=("Segoe UI", 12, "bold")).pack(anchor="w", pady=(0, 20))
+        ttk.Label(main, text="폴더 일괄 처리 (Batch Folder Processing)", font=("System", 12, "bold")).pack(anchor="w", pady=(0, 20))
 
         # Folder Selection
         f_frame = ttk.LabelFrame(main, text="경로 설정", padding=15)
         f_frame.pack(fill="x", pady=(0, 20))
         create_help_btn(f_frame, "배치 경로 가이드", 
-            "• 소스 폴더: 처리할 엑셀/CSV 파일들이 들어있는 폴더입니다.\n"
-            "• 결과 저장 폴더: 작업이 끝난 파일들이 저장될 위치입니다.").place(relx=1.0, x=-5, y=-5, anchor="ne")
+            "- 소스 폴더: 처리할 엑셀/CSV 파일들이 들어있는 폴더입니다.\n"
+            "- 결과 저장 폴더: 작업이 끝난 파일들이 저장될 위치입니다.").place(relx=1.0, x=-5, y=-5, anchor="ne")
 
         self.src_path = tk.StringVar()
         ttk.Label(f_frame, text="소스 폴더:").grid(row=0, column=0, sticky="w")
@@ -43,9 +43,9 @@ class BatchTab(ttk.Frame):
         opt_frame = ttk.LabelFrame(main, text="실행 규칙 (프리셋)", padding=15)
         opt_frame.pack(fill="x", pady=(0, 20))
         create_help_btn(opt_frame, "배치 옵션 가이드", 
-            "• 프리셋: 추출할 컬럼과 필터 규칙을 미리 저장한 프리셋을 선택합니다.\n"
-            "• 결과 합치기: 모든 파일의 결과물을 하나의 엑셀 시트로 병합합니다.\n"
-            "• 공통 참조: 모든 원본 파일에 대해 공통으로 매칭할 데이터가 있을 경우 선택합니다.").place(relx=1.0, x=-5, y=-5, anchor="ne")
+            "- 프리셋: 추출할 컬럼과 필터 규칙을 미리 저장한 프리셋을 선택합니다.\n"
+            "- 결과 합치기: 모든 파일의 결과물을 하나의 엑셀 시트로 병합합니다.\n"
+            "- 공통 참조: 모든 원본 파일에 대해 공통으로 매칭할 데이터가 있을 경우 선택합니다.").place(relx=1.0, x=-5, y=-5, anchor="ne")
 
         ttk.Label(opt_frame, text="적용할 프리셋:").grid(row=0, column=0, sticky="w")
         self.preset_combo = ttk.Combobox(opt_frame, state="readonly", width=30)

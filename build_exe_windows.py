@@ -3,13 +3,13 @@ import subprocess
 import sys
 
 def build_exe():
-    print("🚀 데이터 매니지먼트 스위트 - Windows EXE 빌드 도우미")
+    print("[GO] 데이터 매니지먼트 스위트 - Windows EXE 빌드 도우미")
     
     # 1. 패키지 설치 확인
     try:
         import PyInstaller
     except ImportError:
-        print("💡 PyInstaller가 설치되지 않았습니다. 설치를 진행합니다...")
+        print("[TIP] PyInstaller가 설치되지 않았습니다. 설치를 진행합니다...")
         subprocess.check_call([sys.executable, "-m", "pip", "install", "pyinstaller"])
 
     # 2. PyInstaller 명령어 구성
@@ -31,15 +31,15 @@ def build_exe():
         "app.py"
     ]
 
-    print(f"📦 빌드 시작 (명령어: {' '.join(cmd)})")
+    print(f"[PKG] 빌드 시작 (명령어: {' '.join(cmd)})")
     
     try:
         subprocess.check_call(cmd)
         print("\n✅ 빌드가 완료되었습니다!")
-        print("📁 'dist' 폴더 안에 '데이터추출관리프로그램.exe' 파일이 생성되었습니다.")
+        print("[DIR] 'dist' 폴더 안에 '데이터추출관리프로그램.exe' 파일이 생성되었습니다.")
     except Exception as e:
         print(f"\n❌ 빌드 중 오류가 발생했습니다: {e}")
-        print("💡 수동 빌드 방법: pyinstaller --noconsole --onefile app.py")
+        print("[TIP] 수동 빌드 방법: pyinstaller --noconsole --onefile app.py")
 
 if __name__ == "__main__":
     if sys.platform != "win32":

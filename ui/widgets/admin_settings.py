@@ -20,10 +20,10 @@ class AdminSettingsPopup(tk.Toplevel):
         self.auth_frame = ttk.Frame(self, padding=40)
         self.auth_frame.pack(fill="both", expand=True)
         
-        ttk.Label(self.auth_frame, text="🔒 관리자 암호를 입력하세요", font=("Segoe UI", 11, "bold")).pack(pady=20)
+        ttk.Label(self.auth_frame, text="[ AUTH ] 관리자 암호를 입력하세요", font=("System", 11, "bold")).pack(pady=20)
         
         self.pw_var = tk.StringVar()
-        pw_entry = ttk.Entry(self.auth_frame, textvariable=self.pw_var, show="*", font=("Segoe UI", 12), justify="center")
+        pw_entry = ttk.Entry(self.auth_frame, textvariable=self.pw_var, show="*", font=("System", 12), justify="center")
         pw_entry.pack(fill="x", pady=10)
         pw_entry.focus_set()
         
@@ -45,7 +45,7 @@ class AdminSettingsPopup(tk.Toplevel):
         main = ttk.Frame(self, padding=20)
         main.pack(fill="both", expand=True)
         
-        ttk.Label(main, text="🛠️ 기능 제한 설정 (EasyMatch Pro)", font=("Segoe UI", 12, "bold")).pack(pady=(0, 20))
+        ttk.Label(main, text="[ CONFIG ] 기능 제한 설정 (EasyMatch Pro)", font=("System", 12, "bold")).pack(pady=(0, 20))
         
         # Load Current Config
         with open(self.config_path, 'r', encoding='utf-8') as f:
@@ -66,22 +66,22 @@ class AdminSettingsPopup(tk.Toplevel):
 
         ttk.Separator(main, orient="horizontal").pack(fill="x", pady=20)
         
-        ttk.Label(main, text="* 설정 변경 후 프로그램을 재시작해야 적용됩니다.", foreground="gray", font=("Segoe UI", 8)).pack()
+        ttk.Label(main, text="* 설정 변경 후 프로그램을 재시작해야 적용됩니다.", foreground="gray", font=("System", 8)).pack()
         
         btn_frame = ttk.Frame(main)
         btn_frame.pack(side="bottom", fill="x", pady=10)
 
         # License Management Section
         ttk.Separator(main, orient="horizontal").pack(fill="x", pady=20)
-        ttk.Label(main, text="🔑 라이센스 관리 (Key Generator)", font=("Segoe UI", 11, "bold")).pack(pady=(0, 10))
+        ttk.Label(main, text="[ LICENSE ] 라이센스 관리 (Key Generator)", font=("System", 11, "bold")).pack(pady=(0, 10))
         
         # Current Machine Info
         mid = LicenseManager.get_machine_id()
         u_info = self.config.get('user_info', {})
         u_str = f"{u_info.get('name', '미등록')} ({u_info.get('email', '-')})"
         
-        ttk.Label(main, text=f"등록 사용자: {u_str}", foreground="#00E5FF", font=("Segoe UI", 9, "bold")).pack(anchor="w")
-        ttk.Label(main, text=f"이 기기 ID: {mid}", foreground="gray", font=("Segoe UI", 8)).pack(anchor="w")
+        ttk.Label(main, text=f"등록 사용자: {u_str}", foreground="#00E5FF", font=("System", 9, "bold")).pack(anchor="w")
+        ttk.Label(main, text=f"이 기기 ID: {mid}", foreground="gray", font=("System", 8)).pack(anchor="w")
         
         # Key Generator
         gen_frame = ttk.LabelFrame(main, text="키 생성기", padding=10)
@@ -108,17 +108,17 @@ class AdminSettingsPopup(tk.Toplevel):
                     json.dump(self.config, f, indent=4, ensure_ascii=False)
                 messagebox.showinfo("완료", "라이센스가 초기화되었습니다.")
 
-        ttk.Button(main, text="🗑️ 이 기기 라이센스 초기화", command=reset_license_data).pack(fill="x", pady=10)
+        ttk.Button(main, text="[ RESET ] 이 기기 라이센스 초기화", command=reset_license_data).pack(fill="x", pady=10)
 
         # Telemetry Section
         ttk.Separator(main, orient="horizontal").pack(fill="x", pady=15)
-        ttk.Label(main, text="📊 원격 사용현황 모니터링 (Telemetry)", font=("Segoe UI", 11, "bold")).pack(pady=(0, 10))
+        ttk.Label(main, text="[ MONITOR ] 원격 사용현황 모니터링 (Telemetry)", font=("System", 11, "bold")).pack(pady=(0, 10))
         
         tel_cfg = self.config.get('telemetry', {})
         self.tel_enabled = tk.BooleanVar(value=tel_cfg.get('enabled', False))
         ttk.Checkbutton(main, text="사용현황 서버(구글시트)로 전송 활성화", variable=self.tel_enabled).pack(anchor="w")
         
-        ttk.Label(main, text="모니터링 Webhook URL:", font=("Segoe UI", 9)).pack(anchor="w", pady=(10, 0))
+        ttk.Label(main, text="모니터링 Webhook URL:", font=("System", 9)).pack(anchor="w", pady=(10, 0))
         self.tel_url = tk.StringVar(value=tel_cfg.get('url', ''))
         ttk.Entry(main, textvariable=self.tel_url).pack(fill="x", pady=5)
         

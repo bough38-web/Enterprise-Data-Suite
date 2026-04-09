@@ -5,6 +5,14 @@ import datetime
 from utils.license_manager import LicenseManager
 
 class TelemetryManager:
+    _cached_mid = None
+
+    @staticmethod
+    def get_id():
+        if not TelemetryManager._cached_mid:
+            TelemetryManager._cached_mid = LicenseManager.get_machine_id()
+        return TelemetryManager._cached_mid
+
     @staticmethod
     def log_event(url, event_type, details=None, user_info=None):
         """Send a telemetry event to the remote webhook asynchronously."""
@@ -13,7 +21,7 @@ class TelemetryManager:
         def task():
             try:
                 payload = {
-                    "mid": LicenseManager.get_machine_id(),
+                    "mid": TelemetryManager.get_id(),
                     "timestamp": datetime.datetime.now().isoformat(),
                     "event": event_type,
                     "user": user_info or {},

@@ -35,16 +35,17 @@ class MatchTab(ttk.Frame):
         self.on_load_callback = callback
 
     def build_ui(self):
-        ctrl_frame = ttk.Frame(self, padding=10)
+        ctrl_frame = ttk.Frame(self, padding=20)
         ctrl_frame.pack(side="left", fill="y")
+
         
         # 1. Data Source
         load_lf = ttk.LabelFrame(ctrl_frame, text="데이터 소스", padding=10)
         load_lf.pack(fill="x", pady=(0, 10))
         create_help_btn(load_lf, "데이터 소스 가이드", 
-            "• 활성 엑셀: 현재 열려있는 엑셀 창에서 데이터를 가져옵니다.\n"
-            "• 원본 파일: 추출 및 매칭을 할 주 데이터를 선택합니다.\n"
-            "• 참조 파일: 매칭 시 기준이 되는 데이터를 선택합니다. (생략 가능)").place(relx=1.0, x=-5, y=-5, anchor="ne")
+            "- 활성 엑셀: 현재 열려있는 엑셀 창에서 데이터를 가져옵니다.\n"
+            "- 원본 파일: 추출 및 매칭을 할 주 데이터를 선택합니다.\n"
+            "- 참조 파일: 매칭 시 기준이 되는 데이터를 선택합니다. (생략 가능)").place(relx=1.0, x=-5, y=-5, anchor="ne")
         
         ttk.Button(load_lf, text="활성 엑셀 연동", command=self.load_active).pack(fill="x", pady=2)
         ttk.Button(load_lf, text="원본 파일 열기", command=lambda: self.load_file('left')).pack(fill="x", pady=2)
@@ -57,9 +58,9 @@ class MatchTab(ttk.Frame):
         cloud_lf = ttk.LabelFrame(ctrl_frame, text="클라우드 소스 (GitHub Raw)", padding=10)
         cloud_lf.pack(fill="x", pady=(0, 10))
         create_help_btn(cloud_lf, "클라우드 가이드", 
-            "• GitHub Raw URL을 입력하세요.\n"
-            "• '헤더 확인' 후 필요한 컬럼만 선택하여 다운로드할 수 있습니다.\n"
-            "• Private 저장소라면 Token이 필요합니다.").place(relx=1.0, x=-5, y=-5, anchor="ne")
+            "- GitHub Raw URL을 입력하세요.\n"
+            "- '헤더 확인' 후 필요한 컬럼만 선택하여 다운로드할 수 있습니다.\n"
+            "- Private 저장소라면 Token이 필요합니다.").place(relx=1.0, x=-5, y=-5, anchor="ne")
         
         self.cloud_url = tk.StringVar()
         self.cloud_token = tk.StringVar()
@@ -79,8 +80,8 @@ class MatchTab(ttk.Frame):
         gs_lf = ttk.LabelFrame(ctrl_frame, text="구글 스프레드시트 연동", padding=10)
         gs_lf.pack(fill="x", pady=(0, 10))
         create_help_btn(gs_lf, "구글 시트 가이드", 
-            "• 시트 주소를 입력하세요. (공개 필요)\n"
-            "• 특정 시트(탭)를 여러 개 불러오려면 쉼표(,)로 구분하세요.\n"
+            "- 시트 주소를 입력하세요. (공개 필요)\n"
+            "- 특정 시트(탭)를 여러 개 불러오려면 쉼표(,)로 구분하세요.\n"
             "  예: 유지시설, 해지시설, 정지시설").place(relx=1.0, x=-5, y=-5, anchor="ne")
         
         self.gs_url = tk.StringVar()
@@ -101,8 +102,8 @@ class MatchTab(ttk.Frame):
         opt_lf = ttk.LabelFrame(ctrl_frame, text="추출 옵션", padding=10)
         opt_lf.pack(fill="x", pady=(0, 10))
         create_help_btn(opt_lf, "옵션 가이드", 
-            "• 대상 필터: 시설/요금구분 컬럼이 '대상'인 행만 추출합니다.\n"
-            "• 직접 파일 저장: 50만 행 이상의 대용량 작업 시 권장합니다. "
+            "- 대상 필터: 시설/요금구분 컬럼이 '대상'인 행만 추출합니다.\n"
+            "- 직접 파일 저장: 50만 행 이상의 대용량 작업 시 권장합니다. "
             "엑셀 창을 거치지 않고 파일로 즉시 저장하여 매우 빠르고 안전합니다.").place(relx=1.0, x=-5, y=-5, anchor="ne")
         
         self.mode_var = tk.StringVar(value="keep")
@@ -123,8 +124,8 @@ class MatchTab(ttk.Frame):
         filter_lf = ttk.LabelFrame(ctrl_frame, text="필터링 조건 설정", padding=10)
         filter_lf.pack(fill="both", expand=True, pady=(0, 10))
         create_help_btn(filter_lf, "필터 가이드", 
-            "• In: 선택한 값들이 포함된 행만 추출합니다.\n"
-            "• '추가' 버튼을 눌러 여러 개의 조건을 동시에 적용할 수 있습니다.").place(relx=1.0, x=-5, y=-5, anchor="ne")
+            "- In: 선택한 값들이 포함된 행만 추출합니다.\n"
+            "- '추가' 버튼을 눌러 여러 개의 조건을 동시에 적용할 수 있습니다.").place(relx=1.0, x=-5, y=-5, anchor="ne")
         
         f_top = ttk.Frame(filter_lf)
         f_top.pack(fill="x")
@@ -162,7 +163,7 @@ class MatchTab(ttk.Frame):
         pre_btns = ttk.Frame(pre_lf)
         pre_btns.pack(fill="x", pady=(5, 0))
         ttk.Button(pre_btns, text="+ 현재 조건 저장", command=self.save_current_preset).pack(side="left", expand=True, fill="x", padx=2)
-        ttk.Button(pre_btns, text="🔔 관리", command=self.manage_presets_ui).pack(side="left", expand=True, fill="x", padx=2)
+        ttk.Button(pre_btns, text="[MNG] 관리", command=self.manage_presets_ui).pack(side="left", expand=True, fill="x", padx=2)
 
         # 6. Action
         self.run_btn = ttk.Button(ctrl_frame, text="추출 및 저장 실행", command=self.run_process, style="Accent.TButton")
@@ -192,7 +193,8 @@ class MatchTab(ttk.Frame):
             for idx, col in enumerate(self.cloud_headers):
                 var = tk.BooleanVar(value=True)
                 self.col_vars[col] = var
-                ttk.Checkbutton(self.scroll_frame.scrollable_frame, text=str(col), variable=var).grid(row=idx//3, column=idx%3, sticky="w", padx=10, pady=5)
+                ttk.Checkbutton(self.scroll_frame.scrollable_frame, text=str(col), variable=var).grid(row=idx//4, column=idx%4, sticky="w", padx=15, pady=6)
+
             
             self.filter_combo['values'] = self.cloud_headers
             self.set_info("클라우드 헤더 로드 완료")
@@ -281,7 +283,8 @@ class MatchTab(ttk.Frame):
         for idx, col in enumerate(cols):
             var = tk.BooleanVar(value=True)
             self.col_vars[col] = var
-            ttk.Checkbutton(self.scroll_frame.scrollable_frame, text=str(col), variable=var).grid(row=idx//3, column=idx%3, sticky="w", padx=10, pady=5)
+            ttk.Checkbutton(self.scroll_frame.scrollable_frame, text=str(col), variable=var).grid(row=idx//4, column=idx%4, sticky="w", padx=15, pady=6)
+
 
     def add_filter_rule(self):
         col = self.filter_col_var.get()
@@ -370,7 +373,7 @@ class MatchTab(ttk.Frame):
         popup.geometry("300x400")
         popup.grab_set()
         
-        ttk.Label(popup, text="저장된 프리셋 목록", font=("Segoe UI", 10, "bold")).pack(pady=10)
+        ttk.Label(popup, text="저장된 프리셋 목록", font=("System", 10, "bold")).pack(pady=10)
         
         lb = tk.Listbox(popup)
         lb.pack(fill="both", expand=True, padx=10, pady=5)
@@ -474,7 +477,8 @@ class MatchTab(ttk.Frame):
             for idx, col in enumerate(self.cloud_headers):
                 var = tk.BooleanVar(value=True)
                 self.col_vars[col] = var
-                ttk.Checkbutton(self.scroll_frame.scrollable_frame, text=str(col), variable=var).grid(row=idx//3, column=idx%3, sticky="w", padx=10, pady=5)
+                ttk.Checkbutton(self.scroll_frame.scrollable_frame, text=str(col), variable=var).grid(row=idx//4, column=idx%4, sticky="w", padx=15, pady=6)
+
             
             self.filter_combo['values'] = self.cloud_headers
             self.set_info("구글 헤더 로드 완료")
