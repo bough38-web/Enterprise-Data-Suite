@@ -15,6 +15,7 @@ from ui.tabs.batch_tab import BatchTab
 from ui.tabs.cleaner_tab import CleanerTab
 from ui.tabs.stats_tab import StatsTab
 from ui.widgets.admin_settings import AdminSettingsPopup
+from utils.license_manager import LicenseManager
 
 class AnimatedSplash(tk.Toplevel):
     def __init__(self, callback):
@@ -108,6 +109,80 @@ class EasyMatchPro(tk.Tk):
         style.configure("Accent.TButton", font=("Segoe UI", 10, "bold"), foreground="white")
 
     def launch_main(self):
+        # 1. Check License first
+        if not self.check_license_status():
+            self.show_license_gate()
+        else:
+            self.start_app()
+
+    def check_license_status(self):
+        """Verify the stored license key against the current machine ID."""
+        saved_key = self.config.get('license_key')
+        if not saved_key: return False
+        
+        mid = LicenseManager.get_machine_id()
+        return LicenseManager.verify_key(mid, saved_key)
+
+    def show_license_gate(self):
+        mid = LicenseManager.get_machine_id()
+        gate = tk.Toplevel(self)
+        gate.title("EasyMatch License Verification")
+        gate.geometry("500x450")
+        gate.resizable(False, False)
+        gate.grab_set()
+        
+        # Center Gate
+        sw = self.winfo_screenwidth()
+        sh = self.winfo_screenheight()
+        gate.geometry(f"500x450+{sw//2-250}+{sh//2-225}")
+        
+        # UI
+        main = ttk.Frame(gate, padding=30)
+        main.pack(fill="both", expand=True)
+        
+        ttk.Label(main, text="🛡️ 라이센스 등록이 필요합니다", font=("Segoe UI", 14, "bold")).pack(pady=(0, 20))
+        
+        ttk.Label(main, text="아래 '기기 고유 ID'를 복사하여 관리자에게 전달하세요.", font=("Segoe UI", 9)).pack(anchor="w")
+        
+        id_frame = ttk.Frame(main)
+        id_frame.pack(fill="x", pady=10)
+        id_entry = ttk.Entry(id_frame, font=("Consolas", 10), justify="center")
+        id_entry.insert(0, mid)
+        id_entry.config(state="readonly")
+        id_entry.pack(fill="x", side="left", expand=True)
+        
+        def copy_id():
+            self.clipboard_clear()
+            self.clipboard_append(mid)
+            messagebox.showinfo("복사 완료", "기기 ID가 클립보드에 복사되었습니다.")
+        
+        ttk.Button(id_frame, text="복사", width=5, command=copy_id).pack(side="right", padx=5)
+
+        ttk.Separator(main, orient="horizontal").pack(fill="x", pady=20)
+        
+        ttk.Label(main, text="라이센스 키 입력:", font=("Segoe UI", 10, "bold")).pack(anchor="w")
+        key_var = tk.StringVar()
+        key_entry = ttk.Entry(main, textvariable=key_var, font=("Consolas", 12), justify="center")
+        key_entry.pack(fill="x", pady=10)
+        
+        def verify():
+            provided = key_var.get().strip()
+            if LicenseManager.verify_key(mid, provided):
+                self.config['license_key'] = provided
+                with open(self.config_path, 'w', encoding='utf-8') as f:
+                    json.dump(self.config, f, indent=4, ensure_ascii=False)
+                messagebox.showinfo("성공", "라이센스가 성공적으로 등록되었습니다!")
+                gate.destroy()
+                self.start_app()
+            else:
+                messagebox.showerror("오류", "유효하지 않은 라이센스 키입니다.")
+
+        ttk.Button(main, text="라이센스 등록 및 시작", command=verify, style="Accent.TButton").pack(fill="x", pady=20)
+        
+        # If gate is closed without license, exit app
+        gate.protocol("WM_DELETE_WINDOW", sys.exit)
+
+    def start_app(self):
         self.deiconify()
         self.build_ui()
 

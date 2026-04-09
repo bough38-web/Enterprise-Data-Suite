@@ -2,12 +2,13 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import json
 from pathlib import Path
+from utils.license_manager import LicenseManager
 
 class AdminSettingsPopup(tk.Toplevel):
     def __init__(self, parent):
         super().__init__(parent)
         self.title("Administrator Settings")
-        self.geometry("400x500")
+        self.geometry("450x700")
         self.config_path = Path("config.json")
         self.grab_set() # Modal
         
@@ -68,6 +69,42 @@ class AdminSettingsPopup(tk.Toplevel):
         
         btn_frame = ttk.Frame(main)
         btn_frame.pack(side="bottom", fill="x", pady=10)
+
+        # License Management Section
+        ttk.Separator(main, orient="horizontal").pack(fill="x", pady=20)
+        ttk.Label(main, text="🔑 라이센스 관리 (Key Generator)", font=("Segoe UI", 11, "bold")).pack(pady=(0, 10))
+        
+        # Current Machine Info
+        mid = LicenseManager.get_machine_id()
+        ttk.Label(main, text=f"이 기기 ID: {mid}", foreground="gray", font=("Segoe UI", 8)).pack(anchor="w")
+        
+        # Key Generator
+        gen_frame = ttk.LabelFrame(main, text="키 생성기", padding=10)
+        gen_frame.pack(fill="x", pady=10)
+        
+        ttk.Label(gen_frame, text="타겟 기기 ID 입력:").pack(anchor="w")
+        target_id_var = tk.StringVar()
+        ttk.Entry(gen_frame, textvariable=target_id_var).pack(fill="x", pady=5)
+        
+        def generate_custom_key():
+            target = target_id_var.get().strip()
+            if not target: return
+            new_key = LicenseManager.generate_key(target)
+            self.clipboard_clear()
+            self.clipboard_append(new_key)
+            messagebox.showinfo("생성 완료", f"라이센스 키가 생성되어 클립보드에 복사되었습니다:\n\n{new_key}")
+            
+        ttk.Button(gen_frame, text="라이센스 키 생성 및 복사", command=generate_custom_key).pack(fill="x", pady=5)
+
+        def reset_license_data():
+            if messagebox.askyesno("주의", "현재 등록된 라이센스를 삭제할까요?"):
+                self.config['license_key'] = ""
+                with open(self.config_path, 'w', encoding='utf-8') as f:
+                    json.dump(self.config, f, indent=4, ensure_ascii=False)
+                messagebox.showinfo("완료", "라이센스가 초기화되었습니다.")
+
+        ttk.Button(main, text="🗑️ 이 기기 라이센스 초기화", command=reset_license_data).pack(fill="x", pady=10)
+
         ttk.Button(btn_frame, text="저장 및 닫기", command=self.save_and_close).pack(fill="x")
 
     def save_and_close(self):
