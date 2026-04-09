@@ -171,3 +171,51 @@ class ExcelHandler:
             return pd.read_csv(content, usecols=usecols, low_memory=False, encoding='utf-8-sig')
         else:
             return pd.read_excel(content, usecols=usecols)
+
+    @staticmethod
+    def parse_google_sheet_url(url):
+        """Extract Spreadsheet ID and GID from a standard URL."""
+        # Pattern for ID: /spreadsheets/d/([a-zA-Z0-9-_]+)
+        match = re.search(r'/spreadsheets/d/([a-zA-Z0-9-_]+)', url)
+        if not match: return None, None
+        
+        sheet_id = match.group(1)
+        
+        # Pattern for GID: gid=([0-9]+)
+        gid_match = re.search(r'gid=([0-9]+)', url)
+        gid = gid_match.group(1) if gid_match else "0"
+        
+        return sheet_id, gid
+
+    @staticmethod
+    def read_google_sheet(url, sheet_name=None, usecols=None):
+        """Read data from a public Google Sheet using the export endpoint."""
+        sheet_id, gid = ExcelHandler.parse_google_sheet_url(url)
+        if not sheet_id: raise ValueError("유효하지 않은 구글 스프레드시트 주소입니다.")
+        
+        # If sheet_name is provided, we use the gviz endpoint which is better for names
+        if sheet_name:
+            export_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
+        else:
+            export_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
+            
+        r = requests.get(export_url)
+        r.raise_for_status()
+        
+        return pd.read_csv(io.StringIO(r.text), usecols=usecols, low_memory=False)
+
+    @staticmethod
+    def peek_google_sheet_headers(url, sheet_name=None):
+        """Peek headers from a public Google Sheet."""
+        sheet_id, gid = ExcelHandler.parse_google_sheet_url(url)
+        if not sheet_id: raise ValueError("유효하지 않은 구글 스프레드시트 주소입니다.")
+        
+        if sheet_name:
+            export_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/gviz/tq?tqx=out:csv&sheet={sheet_name}"
+        else:
+            export_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/export?format=csv&gid={gid}"
+            
+        with requests.get(export_url, stream=True) as r:
+            r.raise_for_status()
+            first_line = next(r.iter_lines()).decode('utf-8')
+            return [c.strip('"') for c in first_line.split(',')]

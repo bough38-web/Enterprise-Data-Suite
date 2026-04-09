@@ -74,7 +74,29 @@ class MatchTab(ttk.Frame):
         ttk.Button(c_btns, text="헤더 확인", command=self.peek_cloud).pack(side="left", expand=True, fill="x", padx=2)
         ttk.Button(c_btns, text="선택 다운로드", command=self.download_cloud).pack(side="left", expand=True, fill="x", padx=2)
 
-        # 3. Options
+        # 3. Google Sheets Source (New)
+        gs_lf = ttk.LabelFrame(ctrl_frame, text="구글 스프레드시트 연동", padding=10)
+        gs_lf.pack(fill="x", pady=(0, 10))
+        create_help_btn(gs_lf, "구글 시트 가이드", 
+            "• 시트 주소를 입력하세요. (공개 필요)\n"
+            "• 특정 시트(탭)를 여러 개 불러오려면 쉼표(,)로 구분하세요.\n"
+            "  예: 유지시설, 해지시설, 정지시설").place(relx=1.0, x=-5, y=-5, anchor="ne")
+        
+        self.gs_url = tk.StringVar()
+        self.gs_sheet_names = tk.StringVar()
+        
+        ttk.Label(gs_lf, text="시트 주소:").pack(anchor="w")
+        ttk.Entry(gs_lf, textvariable=self.gs_url).pack(fill="x", pady=2)
+        
+        ttk.Label(gs_lf, text="탭 이름 (쉼표 구분):").pack(anchor="w")
+        ttk.Entry(gs_lf, textvariable=self.gs_sheet_names).pack(fill="x", pady=2)
+        
+        gs_btns = ttk.Frame(gs_lf)
+        gs_btns.pack(fill="x", pady=5)
+        ttk.Button(gs_btns, text="헤더 확인", command=self.peek_google).pack(side="left", expand=True, fill="x", padx=2)
+        ttk.Button(gs_btns, text="선택 다운로드", command=self.download_google).pack(side="left", expand=True, fill="x", padx=2)
+
+        # 4. Options
         opt_lf = ttk.LabelFrame(ctrl_frame, text="추출 옵션", padding=10)
         opt_lf.pack(fill="x", pady=(0, 10))
         create_help_btn(opt_lf, "옵션 가이드", 
@@ -321,3 +343,60 @@ class MatchTab(ttk.Frame):
         for v in self.col_vars.values(): v.set(True)
     def unselect_all_cols(self):
         for v in self.col_vars.values(): v.set(False)
+
+    def peek_google(self):
+        url = self.gs_url.get().strip()
+        if not url: return
+        names = [n.strip() for n in self.gs_sheet_names.get().split(',') if n.strip()]
+        target_name = names[0] if names else None
+        
+        try:
+            self.set_info("구글 헤더 확인 중...")
+            self.cloud_headers = ExcelHandler.peek_google_sheet_headers(url, target_name)
+            
+            # Show headers
+            for w in self.scroll_frame.scrollable_frame.winfo_children(): w.destroy()
+            self.col_vars = {}
+            for idx, col in enumerate(self.cloud_headers):
+                var = tk.BooleanVar(value=True)
+                self.col_vars[col] = var
+                ttk.Checkbutton(self.scroll_frame.scrollable_frame, text=str(col), variable=var).grid(row=idx//3, column=idx%3, sticky="w", padx=10, pady=5)
+            
+            self.filter_combo['values'] = self.cloud_headers
+            self.set_info("구글 헤더 로드 완료")
+        except Exception as e:
+            messagebox.showerror("구글 오류", f"데이터를 읽을 수 없습니다. (공개 여부 확인 필요)\n{e}")
+
+    def download_google(self):
+        url = self.gs_url.get().strip()
+        if not url: return
+        names = [n.strip() for n in self.gs_sheet_names.get().split(',') if n.strip()]
+        selected_cols = [c for c, v in self.col_vars.items() if v.get()]
+        
+        def task():
+            try:
+                self.set_info("구글 시트 로딩 중...")
+                dfs = []
+                if not names:
+                    dfs.append(ExcelHandler.read_google_sheet(url, usecols=selected_cols))
+                else:
+                    for name in names:
+                        self.set_info(f"시트 로드 중: {name}")
+                        dfs.append(ExcelHandler.read_google_sheet(url, sheet_name=name, usecols=selected_cols))
+                
+                # Combine multiple sheets if provided
+                if len(dfs) > 1:
+                    self.df_left = pd.concat(dfs, ignore_index=True)
+                else:
+                    self.df_left = dfs[0]
+                
+                self.left_path = f"GoogleSheet: {url.split('/')[-1][:10]}..."
+                self.check_size()
+                self.refresh_cols()
+                if self.on_load_callback: self.on_load_callback(self.df_left)
+                self.set_info(f"구글 연동 완료 ({len(self.df_left):,}행)")
+            except Exception as e:
+                messagebox.showerror("다운로드 오류", str(e))
+                self.set_info("실패")
+
+        threading.Thread(target=task, daemon=True).start()
