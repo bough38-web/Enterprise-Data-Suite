@@ -16,6 +16,7 @@ from ui.tabs.cleaner_tab import CleanerTab
 from ui.tabs.stats_tab import StatsTab
 from ui.widgets.admin_settings import AdminSettingsPopup
 from utils.license_manager import LicenseManager
+from utils.telemetry import TelemetryManager
 
 class AnimatedSplash(tk.Toplevel):
     def __init__(self, callback):
@@ -96,7 +97,8 @@ class EasyMatchPro(tk.Tk):
         if not self.config_path.exists():
             self.config = {
                 "locked_features": {"batch_tab": False, "cleaner_tab": False, "cloud_source": False, "google_sheets": False},
-                "branding": {"name": "EasyMatch", "version": "v3.5 Pro", "theme": "dark"}
+                "branding": {"name": "EasyMatch", "version": "v3.6 Pro", "theme": "dark"},
+                "telemetry": {"enabled": false, "url": ""}
             }
         else:
             with open(self.config_path, 'r', encoding='utf-8') as f:
@@ -169,6 +171,12 @@ class EasyMatchPro(tk.Tk):
             provided = key_var.get().strip()
             if LicenseManager.verify_key(mid, provided):
                 self.config['license_key'] = provided
+                
+                # Ping Activation
+                tel_cfg = self.config.get('telemetry', {})
+                if tel_cfg.get('enabled'):
+                    TelemetryManager.log_event(tel_cfg.get('url'), "LICENSE_ACTIVATE")
+                
                 with open(self.config_path, 'w', encoding='utf-8') as f:
                     json.dump(self.config, f, indent=4, ensure_ascii=False)
                 messagebox.showinfo("성공", "라이센스가 성공적으로 등록되었습니다!")
@@ -185,6 +193,11 @@ class EasyMatchPro(tk.Tk):
     def start_app(self):
         self.deiconify()
         self.build_ui()
+        
+        # Ping App Start
+        tel_cfg = self.config.get('telemetry', {})
+        if tel_cfg.get('enabled'):
+            TelemetryManager.log_event(tel_cfg.get('url'), "APP_START")
 
     def build_ui(self):
         # Header

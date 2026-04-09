@@ -8,6 +8,7 @@ import os
 
 from utils.excel_io import ExcelHandler
 from utils.data_engine import DataEngine
+from utils.telemetry import TelemetryManager
 from ui.widgets.components import ScrollableFrame, ValueFilterPopup, SheetSelectPopup, create_help_btn
 
 class MatchTab(ttk.Frame):
@@ -425,6 +426,23 @@ class MatchTab(ttk.Frame):
                 
                 self.set_info("완료")
                 messagebox.showinfo("성공", f"{res_msg}\n처리 행: {len(df_res):,}건")
+                
+                # Ping Task Complete
+                try:
+                    master = self.winfo_toplevel()
+                    if hasattr(master, 'config'):
+                        tel_cfg = master.config.get('telemetry', {})
+                        if tel_cfg.get('enabled'):
+                            # Mask filename for privacy
+                            fname = os.path.basename(self.left_path)
+                            mask_name = fname[:3] + "***" + os.path.splitext(fname)[1]
+                            TelemetryManager.log_event(tel_cfg.get('url'), "TASK_COMPLETE", {
+                                "rows": len(df_res),
+                                "file": mask_name,
+                                "fuzzy": self.fuzzy_match.get()
+                            })
+                except: pass
+
             except Exception as e:
                 messagebox.showerror("오류", str(e))
                 self.set_info("실패")

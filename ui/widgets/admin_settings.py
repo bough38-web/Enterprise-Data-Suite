@@ -3,6 +3,7 @@ from tkinter import ttk, messagebox
 import json
 from pathlib import Path
 from utils.license_manager import LicenseManager
+from utils.telemetry import TelemetryManager
 
 class AdminSettingsPopup(tk.Toplevel):
     def __init__(self, parent):
@@ -105,11 +106,41 @@ class AdminSettingsPopup(tk.Toplevel):
 
         ttk.Button(main, text="🗑️ 이 기기 라이센스 초기화", command=reset_license_data).pack(fill="x", pady=10)
 
+        # Telemetry Section
+        ttk.Separator(main, orient="horizontal").pack(fill="x", pady=15)
+        ttk.Label(main, text="📊 원격 사용현황 모니터링 (Telemetry)", font=("Segoe UI", 11, "bold")).pack(pady=(0, 10))
+        
+        tel_cfg = self.config.get('telemetry', {})
+        self.tel_enabled = tk.BooleanVar(value=tel_cfg.get('enabled', False))
+        ttk.Checkbutton(main, text="사용현황 서버(구글시트)로 전송 활성화", variable=self.tel_enabled).pack(anchor="w")
+        
+        ttk.Label(main, text="모니터링 Webhook URL:", font=("Segoe UI", 9)).pack(anchor="w", pady=(10, 0))
+        self.tel_url = tk.StringVar(value=tel_cfg.get('url', ''))
+        ttk.Entry(main, textvariable=self.tel_url).pack(fill="x", pady=5)
+        
+        def test_tel():
+            url = self.tel_url.get().strip()
+            if not url: return
+            try:
+                if TelemetryManager.test_ping(url):
+                    messagebox.showinfo("성공", "연결 성공! 구글 시트를 확인하세요.")
+                else:
+                    messagebox.showerror("실패", "서버 응답이 200(OK)이 아닙니다.")
+            except Exception as e:
+                messagebox.showerror("오류", str(e))
+                
+        ttk.Button(main, text="테스트 핑(Test Ping) 전송", command=test_tel).pack(fill="x", pady=5)
+
         ttk.Button(btn_frame, text="저장 및 닫기", command=self.save_and_close).pack(fill="x")
 
     def save_and_close(self):
         for key, var in self.toggles.items():
             self.config['locked_features'][key] = var.get()
+            
+        self.config['telemetry'] = {
+            "enabled": self.tel_enabled.get(),
+            "url": self.tel_url.get().strip()
+        }
             
         with open(self.config_path, 'w', encoding='utf-8') as f:
             json.dump(self.config, f, indent=4, ensure_ascii=False)
