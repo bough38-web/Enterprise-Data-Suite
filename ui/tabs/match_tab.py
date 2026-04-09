@@ -21,12 +21,17 @@ class MatchTab(ttk.Frame):
         self.col_vars = {}
         self.active_filters = []
         self.presets_file = Path("presets.json")
+        self.on_load_callback = None
         
         # Cloud Integration State
         self.cloud_headers = []
         
         self.build_ui()
         self.load_presets_list()
+
+    def register_on_load(self, callback):
+        """Register a function to be called whenever df_left is updated."""
+        self.on_load_callback = callback
 
     def build_ui(self):
         ctrl_frame = ttk.Frame(self, padding=10)
@@ -83,6 +88,9 @@ class MatchTab(ttk.Frame):
         
         self.auto_target = tk.BooleanVar(value=True)
         ttk.Checkbutton(opt_lf, text="대상 필터", variable=self.auto_target).pack(side="left", padx=5)
+
+        self.fuzzy_match = tk.BooleanVar(value=False)
+        ttk.Checkbutton(opt_lf, text="유사도 매칭", variable=self.fuzzy_match).pack(side="left", padx=5)
 
         self.direct_save = tk.BooleanVar(value=False)
         self.ds_check = ttk.Checkbutton(opt_lf, text="직접 파일 저장", variable=self.direct_save)
@@ -166,6 +174,7 @@ class MatchTab(ttk.Frame):
                 self.df_left = df
                 self.left_path = f"Cloud: {url.split('/')[-1]}"
                 self.check_size()
+                if self.on_load_callback: self.on_load_callback(self.df_left)
                 self.set_info(f"다운로드 완료 ({len(df):,}행)")
             except Exception as e:
                 messagebox.showerror("다운로드 오류", str(e))
@@ -188,6 +197,7 @@ class MatchTab(ttk.Frame):
             
             self.check_size()
             self.refresh_cols()
+            if self.on_load_callback: self.on_load_callback(self.df_left)
             self.set_info(f"연동: {left_ws.name}")
         except Exception as e:
             messagebox.showerror("오류", str(e))
@@ -212,6 +222,7 @@ class MatchTab(ttk.Frame):
             
             self.check_size()
             self.refresh_cols()
+            if self.on_load_callback: self.on_load_callback(self.df_left)
             self.set_info(f"{'원본' if side=='left' else '참조'} 로드 완료")
         except Exception as e:
             messagebox.showerror("오류", str(e))
@@ -275,7 +286,11 @@ class MatchTab(ttk.Frame):
                 if self.df_right is not None:
                     key = DataEngine.auto_find_key(self.df_left, self.df_right)
                     matches = DataEngine.auto_match_columns(self.df_left, self.df_right)
-                    df_res = DataEngine.perform_matching(self.df_left, self.df_right, key, matches)
+                    
+                    if self.fuzzy_match.get():
+                        df_res = DataEngine.perform_fuzzy_matching(self.df_left, self.df_right, key)
+                    else:
+                        df_res = DataEngine.perform_matching(self.df_left, self.df_right, key, matches)
                 
                 df_res = DataEngine.apply_filters(df_res, {"auto_target": self.auto_target.get(), "custom_filters": self.active_filters})
                 df_res = DataEngine.select_columns(df_res, [c for c, v in self.col_vars.items() if v.get()], self.mode_var.get())

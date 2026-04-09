@@ -1,5 +1,7 @@
 import pandas as pd
 import numpy as np
+import re
+from thefuzz import process, fuzz
 
 class DataEngine:
     @staticmethod
@@ -97,3 +99,25 @@ class DataEngine:
         res = df.copy()
         res.insert(0, "원본경로", str(path))
         return res
+
+    @staticmethod
+    def perform_fuzzy_matching(df_left, df_right, key_col, threshold=85):
+        """Perform approximate matching for columns that aren't exact matches."""
+        left_unique = df_left[key_col].dropna().unique()
+        right_unique = df_right[key_col].dropna().unique()
+        
+        # Build mapping
+        mapping = {}
+        for l_val in left_unique:
+            # extractOne returns (match, score)
+            best_match = process.extractOne(str(l_val), right_unique.astype(str), scorer=fuzz.token_sort_ratio)
+            if best_match and best_match[1] >= threshold:
+                mapping[l_val] = best_match[0]
+        
+        # Apply mapping to a temporary column
+        df_temp = df_left.copy()
+        df_temp['_fuzzy_key'] = df_temp[key_col].map(mapping)
+        
+        # Merge on fuzzy key
+        res = pd.merge(df_temp, df_right, left_on='_fuzzy_key', right_on=key_col, how='left', suffixes=('', '_ref'))
+        return res.drop(columns=['_fuzzy_key'])

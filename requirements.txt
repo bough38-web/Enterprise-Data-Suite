@@ -5,3 +5,7 @@ xlsxwriter
 numpy
 pyinstaller
 requests
+sv-ttk
+matplotlib
+thefuzz
+python-Levenshtein
