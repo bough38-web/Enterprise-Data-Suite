@@ -1,6 +1,9 @@
 import pandas as pd
 import xlwings as xw
 from pathlib import Path
+import re
+import requests
+import io
 import tkinter as tk
 from tkinter import messagebox
 
@@ -130,3 +133,41 @@ class ExcelHandler:
         elif not right: right = wb.sheets[0]
             
         return left, right
+
+    @staticmethod
+    def peek_headers_from_url(url, token=None):
+        """Fetch only the headers (first row) from a remote URL to show user."""
+        headers = {}
+        if token:
+            headers['Authorization'] = f'token {token}'
+            
+        # For CSV, we can use a Stream to get only the first few bytes
+        if url.lower().endswith('.csv'):
+            with requests.get(url, headers=headers, stream=True) as r:
+                r.raise_for_status()
+                # Read just enough to get the first line
+                first_line = next(r.iter_lines()).decode('utf-8-sig')
+                return first_line.split(',')
+        else:
+            # For Excel, we unfortunately have to download more
+            # but we'll still try to limit it if possible (Excel is hard to stream)
+            r = requests.get(url, headers=headers)
+            r.raise_for_status()
+            df = pd.read_excel(io.BytesIO(r.content), nrows=0)
+            return df.columns.tolist()
+
+    @staticmethod
+    def read_from_url(url, usecols=None, token=None):
+        """Read data from a URL with selective columns and authentication."""
+        headers = {}
+        if token:
+            headers['Authorization'] = f'token {token}'
+            
+        r = requests.get(url, headers=headers)
+        r.raise_for_status()
+        
+        content = io.BytesIO(r.content)
+        if url.lower().endswith('.csv'):
+            return pd.read_csv(content, usecols=usecols, low_memory=False, encoding='utf-8-sig')
+        else:
+            return pd.read_excel(content, usecols=usecols)

@@ -22,6 +22,9 @@ class MatchTab(ttk.Frame):
         self.active_filters = []
         self.presets_file = Path("presets.json")
         
+        # Cloud Integration State
+        self.cloud_headers = []
+        
         self.build_ui()
         self.load_presets_list()
 
@@ -29,7 +32,7 @@ class MatchTab(ttk.Frame):
         ctrl_frame = ttk.Frame(self, padding=10)
         ctrl_frame.pack(side="left", fill="y")
         
-        # Data Source
+        # 1. Data Source
         load_lf = ttk.LabelFrame(ctrl_frame, text="데이터 소스", padding=10)
         load_lf.pack(fill="x", pady=(0, 10))
         create_help_btn(load_lf, "데이터 소스 가이드", 
@@ -44,7 +47,29 @@ class MatchTab(ttk.Frame):
         self.info_var = tk.StringVar(value="대기 중...")
         ttk.Label(load_lf, textvariable=self.info_var, foreground="blue").pack(pady=5)
 
-        # Options
+        # 2. Cloud Source (GitHub LFS)
+        cloud_lf = ttk.LabelFrame(ctrl_frame, text="클라우드 소스 (GitHub Raw)", padding=10)
+        cloud_lf.pack(fill="x", pady=(0, 10))
+        create_help_btn(cloud_lf, "클라우드 가이드", 
+            "• GitHub Raw URL을 입력하세요.\n"
+            "• '헤더 확인' 후 필요한 컬럼만 선택하여 다운로드할 수 있습니다.\n"
+            "• Private 저장소라면 Token이 필요합니다.").place(relx=1.0, x=-5, y=-5, anchor="ne")
+        
+        self.cloud_url = tk.StringVar()
+        self.cloud_token = tk.StringVar()
+        
+        ttk.Label(cloud_lf, text="URL:").pack(anchor="w")
+        ttk.Entry(cloud_lf, textvariable=self.cloud_url).pack(fill="x", pady=2)
+        
+        ttk.Label(cloud_lf, text="Token (영역 선택):").pack(anchor="w")
+        ttk.Entry(cloud_lf, textvariable=self.cloud_token, show="*").pack(fill="x", pady=2)
+        
+        c_btns = ttk.Frame(cloud_lf)
+        c_btns.pack(fill="x", pady=5)
+        ttk.Button(c_btns, text="헤더 확인", command=self.peek_cloud).pack(side="left", expand=True, fill="x", padx=2)
+        ttk.Button(c_btns, text="선택 다운로드", command=self.download_cloud).pack(side="left", expand=True, fill="x", padx=2)
+
+        # 3. Options
         opt_lf = ttk.LabelFrame(ctrl_frame, text="추출 옵션", padding=10)
         opt_lf.pack(fill="x", pady=(0, 10))
         create_help_btn(opt_lf, "옵션 가이드", 
@@ -59,18 +84,16 @@ class MatchTab(ttk.Frame):
         self.auto_target = tk.BooleanVar(value=True)
         ttk.Checkbutton(opt_lf, text="대상 필터", variable=self.auto_target).pack(side="left", padx=5)
 
-        # Large Data Mode
         self.direct_save = tk.BooleanVar(value=False)
-        self.ds_check = ttk.Checkbutton(opt_lf, text="직접 파일 저장 (대용량 권장)", variable=self.direct_save)
+        self.ds_check = ttk.Checkbutton(opt_lf, text="직접 파일 저장", variable=self.direct_save)
         self.ds_check.pack(fill="x", pady=5)
 
-        # Multi Filter
+        # 4. Multi Filter
         filter_lf = ttk.LabelFrame(ctrl_frame, text="필터링 조건 설정", padding=10)
         filter_lf.pack(fill="both", expand=True, pady=(0, 10))
         create_help_btn(filter_lf, "필터 가이드", 
             "• In: 선택한 값들이 포함된 행만 추출합니다.\n"
-            "• Ex: 선택한 값들을 제외하고 추출합니다.\n"
-            "• '추가' 버튼을 눌러 여러 개의 조건을 동시에 적용할 수 있습니다. (AND 조건)").place(relx=1.0, x=-5, y=-5, anchor="ne")
+            "• '추가' 버튼을 눌러 여러 개의 조건을 동시에 적용할 수 있습니다.").place(relx=1.0, x=-5, y=-5, anchor="ne")
         
         f_top = ttk.Frame(filter_lf)
         f_top.pack(fill="x")
@@ -92,22 +115,11 @@ class MatchTab(ttk.Frame):
         ttk.Button(f_btns, text="삭제", command=self.remove_filter_rule).pack(side="left", padx=2)
         ttk.Button(f_btns, text="초기화", command=self.clear_all_filters).pack(side="left", padx=2)
 
-        # Presets
-        preset_lf = ttk.LabelFrame(ctrl_frame, text="프리셋", padding=10)
-        preset_lf.pack(fill="x", pady=(0, 10))
-        self.preset_list = ttk.Combobox(preset_lf, state="readonly")
-        self.preset_list.pack(fill="x", pady=2)
-        
-        p_btns = ttk.Frame(preset_lf)
-        p_btns.pack(fill="x")
-        ttk.Button(p_btns, text="저장", command=self.save_preset).pack(side="left", expand=True, fill="x", padx=1)
-        ttk.Button(p_btns, text="로드", command=self.load_preset).pack(side="left", expand=True, fill="x", padx=1)
-
-        # Action
+        # 5. Action
         self.run_btn = ttk.Button(ctrl_frame, text="추출 및 저장 실행", command=self.run_process)
         self.run_btn.pack(fill="x", pady=10)
 
-        # Columns
+        # 6. Columns
         col_frame = ttk.LabelFrame(self, text="컬럼 선택", padding=10)
         col_frame.pack(side="right", fill="both", expand=True)
         self.scroll_frame = ScrollableFrame(col_frame)
@@ -117,6 +129,49 @@ class MatchTab(ttk.Frame):
         btn_bar.pack(fill="x", pady=5)
         ttk.Button(btn_bar, text="전체 선택", command=self.select_all_cols).pack(side="left", padx=2)
         ttk.Button(btn_bar, text="전체 해제", command=self.unselect_all_cols).pack(side="left", padx=2)
+
+    def peek_cloud(self):
+        url = self.cloud_url.get().strip()
+        if not url: return
+        try:
+            self.set_info("헤더 확인 중...")
+            self.cloud_headers = ExcelHandler.peek_headers_from_url(url, self.cloud_token.get())
+            
+            # Show headers in the column selection area immediately
+            for w in self.scroll_frame.scrollable_frame.winfo_children(): w.destroy()
+            self.col_vars = {}
+            for idx, col in enumerate(self.cloud_headers):
+                var = tk.BooleanVar(value=True)
+                self.col_vars[col] = var
+                ttk.Checkbutton(self.scroll_frame.scrollable_frame, text=str(col), variable=var).grid(row=idx//3, column=idx%3, sticky="w", padx=10, pady=5)
+            
+            self.filter_combo['values'] = self.cloud_headers
+            self.set_info("클라우드 헤더 로드 완료")
+        except Exception as e:
+            messagebox.showerror("클라우드 오류", f"헤더를 읽을 수 없습니다: {e}")
+            self.set_info("실패")
+
+    def download_cloud(self):
+        url = self.cloud_url.get().strip()
+        if not url: return
+        selected_cols = [c for c, v in self.col_vars.items() if v.get()]
+        if not selected_cols:
+            messagebox.showwarning("경고", "다운로드할 컬럼을 선택하세요.")
+            return
+
+        def task():
+            try:
+                self.set_info("클라우드 다운로드 중...")
+                df = ExcelHandler.read_from_url(url, usecols=selected_cols, token=self.cloud_token.get())
+                self.df_left = df
+                self.left_path = f"Cloud: {url.split('/')[-1]}"
+                self.check_size()
+                self.set_info(f"다운로드 완료 ({len(df):,}행)")
+            except Exception as e:
+                messagebox.showerror("다운로드 오류", str(e))
+                self.set_info("실패")
+
+        threading.Thread(target=task, daemon=True).start()
 
     def load_active(self):
         try:
@@ -164,7 +219,6 @@ class MatchTab(ttk.Frame):
     def check_size(self):
         if self.df_left is not None and len(self.df_left) > 500000:
             self.direct_save.set(True)
-            messagebox.showinfo("알림", f"데이터가 매우 큽니다({len(self.df_left):,}행).\n안정적인 처리를 위해 '직접 파일 저장' 모드가 선택되었습니다.")
 
     def refresh_cols(self):
         if self.df_left is None: return
@@ -204,30 +258,6 @@ class MatchTab(ttk.Frame):
             m = "포함" if f['mode'] == 'include' else "제외"
             v = f"{f['values'][0]}" if len(f['values']) == 1 else f"{f['values'][0]} 외 {len(f['values'])-1}건"
             self.filter_listbox.insert(tk.END, f"[{f['column']}] {m}: {v}")
-
-    def save_preset(self):
-        name = simpledialog.askstring("프리셋 저장", "이름:")
-        if not name: return
-        data = {"columns": [c for c, v in self.col_vars.items() if v.get()], "mode": self.mode_var.get(), "auto_target": self.auto_target.get(), "active_filters": self.active_filters}
-        presets = {}
-        if self.presets_file.exists():
-            with open(self.presets_file, 'r', encoding='utf-8') as f: presets = json.load(f)
-        presets[name] = data
-        with open(self.presets_file, 'w', encoding='utf-8') as f: json.dump(presets, f, ensure_ascii=False, indent=4)
-        self.load_presets_list()
-
-    def load_preset(self):
-        name = self.preset_list.get()
-        if not name or not self.presets_file.exists(): return
-        with open(self.presets_file, 'r', encoding='utf-8') as f:
-            data = json.load(f).get(name)
-            if not data: return
-            self.mode_var.set(data.get("mode", "keep"))
-            self.auto_target.set(data.get("auto_target", True))
-            self.active_filters = data.get("active_filters", [])
-            self.update_filter_listbox()
-            sel = set(data.get("columns", []))
-            for c, v in self.col_vars.items(): v.set(c in sel)
 
     def load_presets_list(self):
         if self.presets_file.exists():
