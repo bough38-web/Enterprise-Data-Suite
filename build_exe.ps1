@@ -15,7 +15,7 @@ if (Test-Path ".\build") { Remove-Item -Recurse -Force ".\build" }
 # --name: 결과 파일 이름
 # --add-data: 필요한 리소스 폴더 포함
 Write-Host "[PKG] 패키징 작업 중..." -ForegroundColor Yellow
-pyinstaller --noconsole --onefile --name "데이터추출관리프로그램" --add-data "utils;utils" --add-data "ui;ui" --hidden-import "pandas" --hidden-import "xlwings" --hidden-import "openpyxl" .\app.py
+pyinstaller --noconsole --onefile --name "데이터추출관리프로그램" --add-data "utils;utils" --add-data "ui;ui" --add-data "assets;assets" --hidden-import "pandas" --hidden-import "xlwings" --hidden-import "openpyxl" .\app.py
 
 if ($LASTEXITCODE -eq 0) {
     Write-Host "`n✅ 빌드가 성공적으로 완료되었습니다!" -ForegroundColor Green

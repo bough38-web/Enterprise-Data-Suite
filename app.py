@@ -8,7 +8,27 @@ from pathlib import Path
 from PIL import Image, ImageTk
 
 # Add local directories to path to ensure imports work correctly
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+sys.path.append(BASE_DIR)
+
+def get_resource_path(relative_path):
+    """ Get absolute path to resource, works for dev and for PyInstaller """
+    try:
+        # PyInstaller creates a temp folder and stores path in _MEIPASS
+        base_path = sys._MEIPASS
+    except Exception:
+        base_path = os.path.abspath(".")
+    return os.path.join(base_path, relative_path)
+
+def get_config_path(filename):
+    """ Get path for persistent user data (next to EXE/Script) """
+    if getattr(sys, 'frozen', False):
+        # Running as EXE
+        base_path = os.path.dirname(sys.executable)
+    else:
+        # Running as script
+        base_path = os.path.dirname(os.path.abspath(__file__))
+    return Path(os.path.join(base_path, filename))
 
 from ui.tabs.match_tab import MatchTab
 from ui.tabs.batch_tab import BatchTab
@@ -39,7 +59,8 @@ class SafeSplash(tk.Toplevel):
         
         # Logo
         try:
-            logo_img = Image.open("assets/logo.png")
+            logo_path = get_resource_path("assets/logo.png")
+            logo_img = Image.open(logo_path)
             logo_img = logo_img.resize((200, 200), Image.Resampling.LANCZOS)
             self.logo_photo = ImageTk.PhotoImage(logo_img)
             ttk.Label(self.container, image=self.logo_photo, background="#001F3F").pack(pady=(40, 10))
@@ -69,7 +90,7 @@ class EasyMatchPro(tk.Tk):
     def __init__(self):
         super().__init__()
         self.withdraw() # Hide until splash finish
-        self.config_path = Path("config.json")
+        self.config_path = get_config_path("config.json")
         self.load_config()
         
         self.title(f"{self.config['branding']['name']} {self.config['branding']['version']}")

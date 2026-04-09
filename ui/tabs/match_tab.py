@@ -23,7 +23,17 @@ class MatchTab(ttk.Frame):
         self.right_path = "None"
         self.col_vars = {}
         self.active_filters = []
-        self.presets_file = Path("presets.json")
+        # Resolve stable path for presets.json (next to EXE/Script)
+        if getattr(sys, 'frozen', False):
+            base_path = os.path.dirname(sys.executable)
+        else:
+            base_path = os.path.dirname(os.path.abspath(__file__))
+            # If in ui/tabs folder, go up to project root
+            if "ui" in base_path:
+                base_path = os.path.abspath(os.path.join(base_path, "../.."))
+        
+        self.presets_file = Path(os.path.join(base_path, "presets.json"))
+
         self.on_load_callback = None
         
         # Cloud Integration State
