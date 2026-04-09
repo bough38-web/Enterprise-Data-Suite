@@ -86,18 +86,24 @@ class EasyMatchPro(tk.Tk):
             self.config = {
                 "locked_features": {"batch_tab": False, "cleaner_tab": False, "cloud_source": False, "google_sheets": False},
                 "branding": {"name": "EasyMatch", "version": "v3.9 Pro Official", "theme": "dark"},
-                "telemetry": {"enabled": False, "url": ""}
+                "telemetry": {"enabled": False, "url": ""},
+                "registered_sources": {"github_url": "", "github_token": "", "google_sheets_url": "", "google_sheet_names": ""}
             }
         else:
             try:
                 with open(self.config_path, 'r', encoding='utf-8') as f:
                     self.config = json.load(f)
+                    # Migrating old configs
+                    if 'registered_sources' not in self.config:
+                        self.config['registered_sources'] = {"github_url": "", "github_token": "", "google_sheets_url": "", "google_sheet_names": ""}
             except:
                 self.config = {
                     "locked_features": {"batch_tab": False, "cleaner_tab": False, "cloud_source": False, "google_sheets": False},
                     "branding": {"name": "EasyMatch", "version": "v3.9 Pro Official", "theme": "dark"},
-                    "telemetry": {"enabled": False, "url": ""}
+                    "telemetry": {"enabled": False, "url": ""},
+                    "registered_sources": {"github_url": "", "github_token": "", "google_sheets_url": "", "google_sheet_names": ""}
                 }
+
 
     def apply_theme(self, theme_name):
         self.config['branding']['theme'] = theme_name
@@ -276,9 +282,10 @@ class EasyMatchPro(tk.Tk):
         self.notebook = ttk.Notebook(self)
         self.notebook.pack(fill="both", expand=True, padx=15, pady=10)
 
-        # Tabs
-        self.tab_match = MatchTab(self.notebook)
+        # Tabs (Passing config for registered sources)
+        self.tab_match = MatchTab(self.notebook, self.config)
         self.notebook.add(self.tab_match, text="  스마트 매칭  ")
+
 
         self.tab_stats = StatsTab(self.notebook)
         self.notebook.add(self.tab_stats, text="  데이터 인사이트  ")

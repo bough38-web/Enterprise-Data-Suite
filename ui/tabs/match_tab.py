@@ -12,9 +12,11 @@ from utils.telemetry import TelemetryManager
 from ui.widgets.components import ScrollableFrame, ValueFilterPopup, SheetSelectPopup, create_help_btn
 
 class MatchTab(ttk.Frame):
-    def __init__(self, parent):
+    def __init__(self, parent, config=None):
         super().__init__(parent)
         self.parent = parent
+        self.config = config or {}
+
         self.df_left = None
         self.df_right = None
         self.left_path = "ActiveExcel"
@@ -28,7 +30,9 @@ class MatchTab(ttk.Frame):
         self.cloud_headers = []
         
         self.build_ui()
+        self.load_registered_sources()
         self.load_presets_list()
+
 
     def register_on_load(self, callback):
         """Register a function to be called whenever df_left is updated."""
@@ -57,6 +61,12 @@ class MatchTab(ttk.Frame):
         # 2. Cloud Source (GitHub LFS)
         cloud_lf = ttk.LabelFrame(ctrl_frame, text="클라우드 소스 (GitHub Raw)", padding=10)
         cloud_lf.pack(fill="x", pady=(0, 10))
+        
+        cloud_title_frame = ttk.Frame(cloud_lf)
+        cloud_title_frame.pack(fill="x")
+        ttk.Label(cloud_title_frame, text="GitHub URL:").pack(side="left")
+        ttk.Button(cloud_title_frame, text="저장", width=5, command=lambda: self.save_source_config('github')).pack(side="right")
+        
         create_help_btn(cloud_lf, "클라우드 가이드", 
             "- GitHub Raw URL을 입력하세요.\n"
             "- '헤더 확인' 후 필요한 컬럼만 선택하여 다운로드할 수 있습니다.\n"
@@ -79,6 +89,12 @@ class MatchTab(ttk.Frame):
         # 3. Google Sheets Source (New)
         gs_lf = ttk.LabelFrame(ctrl_frame, text="구글 스프레드시트 연동", padding=10)
         gs_lf.pack(fill="x", pady=(0, 10))
+        
+        gs_title_frame = ttk.Frame(gs_lf)
+        gs_title_frame.pack(fill="x")
+        ttk.Label(gs_title_frame, text="시트 주소:").pack(side="left")
+        ttk.Button(gs_title_frame, text="저장", width=5, command=lambda: self.save_source_config('google')).pack(side="right")
+        
         create_help_btn(gs_lf, "구글 시트 가이드", 
             "- 시트 주소를 입력하세요. (공개 필요)\n"
             "- 특정 시트(탭)를 여러 개 불러오려면 쉼표(,)로 구분하세요.\n"
@@ -457,6 +473,38 @@ class MatchTab(ttk.Frame):
                 self.set_info("실패")
 
         threading.Thread(target=task, daemon=True).start()
+
+    def load_registered_sources(self):
+        """Pre-fill URLs from registered config."""
+        reg = self.config.get('registered_sources', {})
+        self.cloud_url.set(reg.get('github_url', ""))
+        self.cloud_token.set(reg.get('github_token', ""))
+        self.gs_url.set(reg.get('google_sheets_url', ""))
+        self.gs_sheet_names.set(reg.get('google_sheet_names', ""))
+
+    def save_source_config(self, source_type):
+        """Save Cloud/Google URLs with password authentication."""
+        # Custom PW prompt to avoid basic dialog limitations
+        pw = simpledialog.askstring("관리자 인증", "설정을 저장하려면 관리자 암호를 입력하세요:", show="*")
+        if pw != "3867":
+            messagebox.showerror("오류", "암호가 틀렸습니다. 저장 권한이 없습니다.")
+            return
+
+        reg = self.config.get('registered_sources', {})
+        if source_type == 'github':
+            reg['github_url'] = self.cloud_url.get().strip()
+            reg['github_token'] = self.cloud_token.get().strip()
+        else:
+            reg['google_sheets_url'] = self.gs_url.get().strip()
+            reg['google_sheet_names'] = self.gs_sheet_names.get().strip()
+        
+        # Persist to JSON
+        try:
+            with open("config.json", 'w', encoding='utf-8') as f:
+                json.dump(self.config, f, indent=4, ensure_ascii=False)
+            messagebox.showinfo("완료", "소스 설정이 안전하게 등록 및 저장되었습니다.")
+        except Exception as e:
+            messagebox.showerror("오류", f"저장 실패: {e}")
 
     def set_info(self, msg):
         self.info_var.set(msg)

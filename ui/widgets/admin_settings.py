@@ -135,7 +135,25 @@ class AdminSettingsPopup(tk.Toplevel):
                 
         ttk.Button(main, text="테스트 핑(Test Ping) 전송", command=test_tel).pack(fill="x", pady=5)
 
+        # Registered Sources Section
+        ttk.Separator(main, orient="horizontal").pack(fill="x", pady=20)
+        ttk.Label(main, text="[ SOURCES ] 고정 소스 관리 (GitHub / Google)", font=("System", 11, "bold")).pack(pady=(0, 10))
+        
+        reg_frame = ttk.Frame(main)
+        reg_frame.pack(fill="x")
+        
+        reg = self.config.get('registered_sources', {})
+        
+        ttk.Label(reg_frame, text="기본 GitHub URL:", font=("System", 9)).pack(anchor="w")
+        self.reg_github = tk.StringVar(value=reg.get('github_url', ''))
+        ttk.Entry(reg_frame, textvariable=self.reg_github).pack(fill="x", pady=2)
+        
+        ttk.Label(reg_frame, text="기본 구글 시트 URL:", font=("System", 9)).pack(anchor="w", pady=(5, 0))
+        self.reg_google = tk.StringVar(value=reg.get('google_sheets_url', ''))
+        ttk.Entry(reg_frame, textvariable=self.reg_google).pack(fill="x", pady=2)
+
         ttk.Button(btn_frame, text="저장 및 닫기", command=self.save_and_close).pack(fill="x")
+
 
     def save_and_close(self):
         for key, var in self.toggles.items():
@@ -145,9 +163,14 @@ class AdminSettingsPopup(tk.Toplevel):
             "enabled": self.tel_enabled.get(),
             "url": self.tel_url.get().strip()
         }
+        
+        # Save Registered Sources
+        self.config['registered_sources']['github_url'] = self.reg_github.get().strip()
+        self.config['registered_sources']['google_sheets_url'] = self.reg_google.get().strip()
             
         with open(self.config_path, 'w', encoding='utf-8') as f:
             json.dump(self.config, f, indent=4, ensure_ascii=False)
             
         messagebox.showinfo("완료", "설정이 저장되었습니다. 프로그램을 다시 시작해 주세요.")
         self.destroy()
+
