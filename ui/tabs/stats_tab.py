@@ -87,23 +87,29 @@ class StatsTab(ttk.Frame):
         plt.rcParams['axes.unicode_minus'] = False
 
         
-        # Apply Theme Colors to Chart
-        theme = "dark" # Default
+        # Apply Theme Colors to Chart (Professional Sync)
+        theme = "dark" 
         try:
             root = self.winfo_toplevel()
             if hasattr(root, 'config'):
                 theme = root.config['branding'].get('theme', 'dark')
         except: pass
         
-        bg_color = "#1e1e1e" if theme in ["dark", "cosmic", "graphite"] else "#ffffff"
-        fg_color = "white" if theme in ["dark", "cosmic", "graphite"] else "black"
-        accent_color = "#0078D4"
-        if theme == "cosmic": accent_color = "#BB86FC"
-        elif theme == "graphite": accent_color = "#888888"
+        palettes = {
+            "dark": {"bg": "#1E1E1E", "accent": "#4A90E2"},
+            "light": {"bg": "#F8F9FA", "accent": "#4A90E2"},
+            "cosmic": {"bg": "#0F172A", "accent": "#818CF8"},
+            "graphite": {"bg": "#18181B", "accent": "#71717A"}
+        }
+        
+        p = palettes.get(theme, palettes['dark'])
+        bg_color = p['bg']
+        fg_color = "white" if theme in ["dark", "cosmic", "graphite"] else "#333333"
+        accent_color = p['accent']
         
         fig.patch.set_facecolor(bg_color)
         ax.set_facecolor(bg_color)
-        ax.tick_params(colors=fg_color, which='both')
+        ax.tick_params(colors=fg_color, which='both', labelsize=8)
         ax.xaxis.label.set_color(fg_color)
         ax.yaxis.label.set_color(fg_color)
         ax.title.set_color(fg_color)
@@ -111,9 +117,9 @@ class StatsTab(ttk.Frame):
             spine.set_edgecolor(fg_color)
             
         counts = self.df[col].value_counts().head(10)
-        counts.plot(kind='bar', ax=ax, color=accent_color)
-        ax.set_title(f"[{col}] 상위 10개 분포", fontsize=10, pad=15)
-        ax.tick_params(axis='x', rotation=45, labelsize=8)
+        counts.plot(kind='bar', ax=ax, color=accent_color, alpha=0.8) # Softened bar
+        ax.set_title(f"[{col}] 상위 10개 분포", fontsize=11, pad=15, fontweight='bold')
+        ax.tick_params(axis='x', rotation=45)
         
         # Adjust layout
         plt.tight_layout()
@@ -126,4 +132,5 @@ class StatsTab(ttk.Frame):
     def update_theme(self, theme_name):
         """Called by app.py when theme changes to refresh chart colors."""
         self.update_chart()
+
 

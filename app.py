@@ -109,25 +109,31 @@ class EasyMatchPro(tk.Tk):
         style = ttk.Style(self)
         style.configure("Header.TLabel", font=("System", 18, "bold"))
         
-        # Custom Theme Overrides
-        if theme_name == "cosmic":
-            # Purple / Teal accents
-            style.configure("Accent.TButton", background="#6200EE", foreground="white")
-            style.map("Accent.TButton", background=[("active", "#3700B3")])
-            self.configure(bg="#121212")
-        elif theme_name == "graphite":
-            # Monochrome / Slate accents
-            style.configure("Accent.TButton", background="#455A64", foreground="white")
-            style.map("Accent.TButton", background=[("active", "#37474F")])
-            self.configure(bg="#212121")
-        elif theme_name == "dark":
-            style.configure("Accent.TButton", background="#007ACC", foreground="white")
-        else: # Light
-            style.configure("Accent.TButton", background="#007ACC", foreground="white")
-            
+        # Professional Palette Definition
+        palettes = {
+            "dark": {"bg": "#1E1E1E", "accent": "#4A90E2"},     # VS Code inspired
+            "light": {"bg": "#F8F9FA", "accent": "#4A90E2"},    # Modern Clean
+            "cosmic": {"bg": "#0F172A", "accent": "#818CF8"},   # Midnight Blue (Soft Indigo)
+            "graphite": {"bg": "#18181B", "accent": "#71717A"}  # Zinc Grey
+        }
+        
+        p = palettes.get(theme_name, palettes['dark'])
+        cfg_bg = p['bg']
+        cfg_accent = p['accent']
+        
+        # Apply Logic
+        self.configure(bg=cfg_bg)
+        style.configure("Accent.TButton", background=cfg_accent, foreground="white")
+        style.map("Accent.TButton", background=[("active", cfg_accent), ("pressed", cfg_accent)])
+        
+        # Header/Notebook Tweaks for Comfort
+        style.configure("TNotebook", background=cfg_bg)
+        style.configure("TFrame", background=cfg_bg)
+        
         # Update StatsTab if it exists
         if hasattr(self, 'tab_stats'):
             self.tab_stats.update_theme(theme_name)
+
 
 
     def launch_main(self):
