@@ -20,7 +20,7 @@ def safe_sheet_name(name):
 
 class ExcelHandler:
     @staticmethod
-    def read_file(path, sheet_name=None):
+    def read_file(path, sheet_name=0):
         ext = Path(path).suffix.lower()
         if ext == ".csv":
             try:
@@ -29,7 +29,11 @@ class ExcelHandler:
                 return pd.read_csv(path, dtype=object, encoding="cp949", low_memory=False)
         
         if ext in [".xlsx", ".xlsm", ".xls"]:
-            return pd.read_excel(path, sheet_name=sheet_name, dtype=object)
+            # If sheet_name is None, pd.read_excel returns a dict. 
+            # We want to default to the first sheet (0) if not specified.
+            actual_sheet = sheet_name if sheet_name is not None else 0
+            return pd.read_excel(path, sheet_name=actual_sheet, dtype=object)
+
         
         raise ValueError(f"Unsupported file format: {ext}")
 

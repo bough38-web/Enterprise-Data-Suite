@@ -228,7 +228,13 @@ class MatchTab(ttk.Frame):
     def load_active(self):
         try:
             self.set_info("연결 중...")
-            left_ws, right_ws = ExcelHandler.detect_special_sheets(None)
+            import xlwings as xw
+            app = xw.apps.active
+            if not app:
+                raise Exception("실행 중인 엑셀이 없습니다.")
+            wb = app.books.active
+            left_ws, right_ws = ExcelHandler.detect_special_sheets(wb)
+
             self.df_left = left_ws.used_range.options(pd.DataFrame, header=1, index=False).value
             self.left_path = f"ActiveSheet: {left_ws.name}"
             
