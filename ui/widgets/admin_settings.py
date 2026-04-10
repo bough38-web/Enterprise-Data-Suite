@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 from utils.license_manager import LicenseManager
 from utils.telemetry import TelemetryManager
+from utils.update_manager import UpdateManager
 
 class AdminSettingsPopup(tk.Toplevel):
     def __init__(self, parent):
@@ -159,6 +160,55 @@ class AdminSettingsPopup(tk.Toplevel):
         self.reg_google = tk.StringVar(value=reg.get('google_sheets_url', ''))
         ttk.Entry(reg_frame, textvariable=self.reg_google).pack(fill="x", pady=2)
         
+        ttk.Label(reg_frame, text="원격 프리셋(Preset) URL (Raw JSON):", font=("System", 9, "bold")).pack(anchor="w", pady=(5, 0))
+        self.reg_presets = tk.StringVar(value=reg.get('remote_presets_url', ''))
+        ttk.Entry(reg_frame, textvariable=self.reg_presets).pack(fill="x", pady=2)
+        
+        ttk.Label(reg_frame, text="원격 업데이트(Update) URL (Manifest JSON):", font=("System", 9, "bold")).pack(anchor="w", pady=(5, 0))
+        self.reg_update = tk.StringVar(value=reg.get('remote_update_url', ''))
+        ttk.Entry(reg_frame, textvariable=self.reg_update).pack(fill="x", pady=2)
+        
+        def force_sync_presets():
+            import sys, os
+            url = self.reg_presets.get().strip()
+            if not url:
+                messagebox.showwarning("입력 필요", "동기화할 URL이 비어있습니다.")
+                return
+            
+            from utils.preset_manager import PresetManager
+            # Determine presets path
+            if getattr(sys, 'frozen', False):
+                p = Path(os.path.dirname(sys.executable)) / "presets.json"
+            else:
+                # Go up to root from ui/widgets/
+                p = Path(os.path.abspath(os.path.join(os.path.dirname(__file__), "../../presets.json")))
+            
+            pm = PresetManager(p)
+            token = self.config.get('registered_sources', {}).get('github_token', '')
+            success, msg, _count = pm.sync_from_remote(url, token)
+            if success:
+                messagebox.showinfo("동기화 성공", msg)
+            else:
+                messagebox.showerror("동기화 실패", msg)
+
+        ttk.Button(reg_frame, text="지금 즉시 프리셋 동기화 (Force Sync)", command=force_sync_presets).pack(fill="x", pady=(5, 10))
+        
+        def manual_check_update():
+            url = self.reg_update.get().strip()
+            if not url:
+                messagebox.showwarning("입력 필요", "업데이트 URL이 비어있습니다.")
+                return
+            
+            manifest = UpdateManager.get_remote_manifest(url)
+            if manifest:
+                ver = manifest.get('version', 'unknown')
+                notes = manifest.get('release_notes', '-')
+                messagebox.showinfo("업데이트 확인", f"서버 최신 버전: {ver}\n\n[업데이트 내용]\n{notes}")
+            else:
+                messagebox.showerror("오류", "업데이트 정보를 가져오지 못했습니다.")
+
+        ttk.Button(reg_frame, text="프로그램 업데이트 확인 (Check Version)", command=manual_check_update).pack(fill="x", pady=5)
+        
         ttk.Label(main, text="기타 관리 설정", font=("System", 11, "bold")).pack(pady=(20, 10))
         ttk.Label(main, text="관리자 연락처(이메일):", font=("System", 9)).pack(anchor="w")
         self.admin_contact = tk.StringVar(value=self.config.get('admin_contact', 'bough38@gmail.com'))
@@ -179,6 +229,8 @@ class AdminSettingsPopup(tk.Toplevel):
         # Save Registered Sources
         self.config['registered_sources']['github_url'] = self.reg_github.get().strip()
         self.config['registered_sources']['google_sheets_url'] = self.reg_google.get().strip()
+        self.config['registered_sources']['remote_presets_url'] = self.reg_presets.get().strip()
+        self.config['registered_sources']['remote_update_url'] = self.reg_update.get().strip()
         
         # Save Admin Contact
         self.config['admin_contact'] = self.admin_contact.get().strip()

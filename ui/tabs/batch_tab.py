@@ -10,10 +10,12 @@ import sys
 from utils.excel_io import ExcelHandler
 from utils.data_engine import DataEngine
 from ui.widgets.components import create_help_btn
+from utils.preset_manager import PresetManager
 
 class BatchTab(ttk.Frame):
-    def __init__(self, parent):
+    def __init__(self, parent, config=None):
         super().__init__(parent)
+        self.config = config or {}
         
         # Resolve stable path for presets.json (next to EXE/Script)
         if getattr(sys, 'frozen', False):
@@ -24,6 +26,7 @@ class BatchTab(ttk.Frame):
                 base_path = os.path.abspath(os.path.join(base_path, "../.."))
         
         self.presets_file = Path(os.path.join(base_path, "presets.json"))
+        self.preset_manager = PresetManager(self.presets_file)
 
         self.build_ui()
 
@@ -61,7 +64,11 @@ class BatchTab(ttk.Frame):
         ttk.Label(opt_frame, text="적용할 프리셋:").grid(row=0, column=0, sticky="w")
         self.preset_combo = ttk.Combobox(opt_frame, state="readonly", width=30)
         self.preset_combo.grid(row=0, column=1, padx=10, pady=5)
-        ttk.Button(opt_frame, text="새로고침", command=self.load_presets).grid(row=0, column=2)
+        
+        btn_grp = ttk.Frame(opt_frame)
+        btn_grp.grid(row=0, column=2)
+        ttk.Button(btn_grp, text="새로고침", width=8, command=self.load_presets).pack(side="left", padx=2)
+        ttk.Button(btn_grp, text="🔄", width=3, command=self.sync_presets).pack(side="left", padx=2)
 
         self.merge_all = tk.BooleanVar(value=False)
         ttk.Checkbutton(opt_frame, text="모든 결과를 하나의 파일로 합치기", variable=self.merge_all).grid(row=1, column=0, columnspan=2, pady=10, sticky="w")
@@ -93,10 +100,32 @@ class BatchTab(ttk.Frame):
         if path: var.set(path)
 
     def load_presets(self):
-        if self.presets_file.exists():
-            with open(self.presets_file, 'r', encoding='utf-8') as f:
-                presets = json.load(f)
-                self.preset_combo['values'] = list(presets.keys())
+        presets = self.preset_manager.load_all()
+        self.preset_combo['values'] = list(presets.keys())
+
+    def sync_presets(self):
+        url = self.config.get('registered_sources', {}).get('remote_presets_url', '')
+        if not url:
+            messagebox.showwarning("경고", "원격 프리셋 URL이 설정되어 있지 않습니다.\n관리자 설정에서 등록하세요.")
+            return
+        
+        def task():
+            try:
+                self.prog_var.set("프리셋 동기화 중...")
+                token = self.config.get('registered_sources', {}).get('github_token', '')
+                success, msg, _count = self.preset_manager.sync_from_remote(url, token)
+                if success:
+                    self.load_presets()
+                    messagebox.showinfo("동기화 성공", msg)
+                    self.prog_var.set("동기화 완료")
+                else:
+                    messagebox.showerror("동기화 실패", msg)
+                    self.prog_var.set("실패")
+            except Exception as e:
+                messagebox.showerror("오류", str(e))
+                self.prog_var.set("실패")
+        
+        threading.Thread(target=task, daemon=True).start()
 
     def run_batch(self):
         src = self.src_path.get()
@@ -110,8 +139,11 @@ class BatchTab(ttk.Frame):
         def task():
             try:
                 self.run_btn.config(state="disabled")
-                with open(self.presets_file, 'r', encoding='utf-8') as f:
-                    preset = json.load(f)[preset_name]
+                presets = self.preset_manager.load_all()
+                preset = presets.get(preset_name)
+                if not preset:
+                    messagebox.showerror("오류", f"'{preset_name}' 프리셋을 찾을 수 없습니다.")
+                    return
 
                 files = [f for f in os.listdir(src) if f.lower().endswith(('.xlsx', '.xls', '.csv'))]
                 if not files:

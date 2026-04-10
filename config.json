@@ -23,7 +23,9 @@
         "github_url": "https://github.com/bough38-web/Enterprise-Data-Suite.git",
         "github_token": "",
         "google_sheets_url": "https://docs.google.com/spreadsheets/d/1oFaGLNJCWc-g4RY_OVQZXyktkcu4FHeGSxWUKYw9kc4/edit?usp=sharing",
-        "google_sheet_names": ""
+        "google_sheet_names": "",
+        "remote_presets_url": "",
+        "remote_update_url": ""
     },
     "admin_contact": "bough38@gmail.com"
 }

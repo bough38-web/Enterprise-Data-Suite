@@ -7,6 +7,8 @@ import sv_ttk
 import webbrowser
 from pathlib import Path
 from PIL import Image, ImageTk
+import threading
+from utils.update_manager import UpdateManager
 
 # Windows High DPI Awareness Optimization
 if sys.platform == "win32":
@@ -390,6 +392,12 @@ class EasyMatchPro(tk.Tk):
         tel_cfg = self.config.get('telemetry', {})
         if tel_cfg.get('enabled'):
             TelemetryManager.log_event(tel_cfg.get('url'), "APP_START", user_info=self.config.get('user_info'))
+        
+        # Auto-sync Presets
+        self.trigger_auto_sync()
+        
+        # Check for Program Updates
+        self.after(5000, self.check_for_program_updates) # Delay slightly for better startup experience
 
 
     def build_ui(self):
@@ -436,7 +444,7 @@ class EasyMatchPro(tk.Tk):
 
         # Feature Locking
         if not self.config['locked_features'].get('batch_tab'):
-            self.tab_batch = BatchTab(self.notebook)
+            self.tab_batch = BatchTab(self.notebook, self.config)
             self.notebook.add(self.tab_batch, text="  일괄 처리(Batch)  ")
 
         if not self.config['locked_features'].get('cleaner_tab'):
@@ -457,6 +465,101 @@ class EasyMatchPro(tk.Tk):
         
         self.like_btn = ttk.Button(pulse_frame, text="LIKE", width=10, command=self.send_pulse_like)
         self.like_btn.pack(side="left", padx=2)
+
+    def trigger_auto_sync(self):
+        url = self.config.get('registered_sources', {}).get('remote_presets_url', '')
+        if not url: return
+        
+        def task():
+            try:
+                # We can use either tab's preset_manager since they point to same file
+                # If BatchTab is locked, it won't exist. So we use MatchTab.
+                token = self.config.get('registered_sources', {}).get('github_token', '')
+                success, _msg, count = self.tab_match.preset_manager.sync_from_remote(url, token)
+                if success and count > 0:
+                    # Notify tabs to reload
+                    self.after(0, self.tab_match.load_presets)
+                    if hasattr(self, 'tab_batch'):
+                        self.after(0, self.tab_batch.load_presets)
+            except:
+                pass 
+        
+        threading.Thread(target=task, daemon=True).start()
+
+    def check_for_program_updates(self):
+        url = self.config.get('registered_sources', {}).get('remote_update_url', '')
+        if not url: return
+        
+        def task():
+            try:
+                manifest = UpdateManager.get_remote_manifest(url)
+                if not manifest: return
+                
+                remote_ver = manifest.get('version', '')
+                current_ver = self.config['branding'].get('version', '')
+                
+                if UpdateManager.is_newer(current_ver, remote_ver):
+                    notes = manifest.get('release_notes', '새로운 기능 및 안정성 개선')
+                    msg = f"새로운 버전({remote_ver})이 출시되었습니다.\n\n[업데이트 내용]\n{notes}\n\n지금 업데이트하시겠습니까?"
+                    
+                    if messagebox.askyesno("업데이트 알림", msg):
+                        self.after(0, lambda: self.perform_full_update(manifest['download_url'], remote_ver))
+            except Exception as e:
+                print(f"Auto-update check failed: {e}")
+
+        threading.Thread(target=task, daemon=True).start()
+
+    def perform_full_update(self, download_url, new_version):
+        # Create progress popup
+        progress_win = tk.Toplevel(self)
+        progress_win.title("업데이트 다운로드 중...")
+        progress_win.geometry("400x150")
+        progress_win.resizable(False, False)
+        progress_win.grab_set()
+        
+        # Center progress win
+        sw = self.winfo_screenwidth()
+        sh = self.winfo_screenheight()
+        progress_win.geometry(f"400x150+{sw//2-200}+{sh//2-75}")
+        
+        lbl = ttk.Label(progress_win, text=f"이지매치 {new_version} 다운로드 중...", padding=20)
+        lbl.pack()
+        
+        prog_var = tk.DoubleVar()
+        pb = ttk.Progressbar(progress_win, variable=prog_var, maximum=1.0, length=300)
+        pb.pack(pady=10)
+
+        def download_task():
+            try:
+                # Target path for new exe
+                if getattr(sys, 'frozen', False):
+                    current_exe = sys.executable
+                    new_exe = current_exe.replace(".exe", "_new.exe")
+                    if "_new" not in new_exe: new_exe = current_exe + ".new"
+                else:
+                    # Dev mode - just mock it or download to temp
+                    current_exe = os.path.abspath(__file__)
+                    new_exe = current_exe + ".new"
+
+                success = UpdateManager.download_file(download_url, new_exe, lambda p: prog_var.set(p))
+                
+                if success:
+                    progress_win.destroy()
+                    if messagebox.showinfo("업데이트 준비 완료", "다운로드가 완료되었습니다. 프로그램을 종료하고 업데이트를 적용합니다."):
+                        if sys.platform == "win32" and getattr(sys, 'frozen', False):
+                            UpdateManager.apply_update_windows(current_exe, new_exe)
+                            sys.exit(0)
+                        else:
+                            # Non-windows or non-frozen: just tell user
+                            messagebox.showinfo("수동 적용 필요", f"업데이트 파일이 다운로드되었습니다: {new_exe}\n직접 교체해 주세요.")
+                else:
+                    progress_win.destroy()
+                    messagebox.showerror("오류", "다운로드 중 오류가 발생했습니다.")
+            except Exception as e:
+                progress_win.destroy()
+                messagebox.showerror("오류", str(e))
+
+        threading.Thread(target=download_task, daemon=True).start()
         
         ttk.Button(pulse_frame, text="REVIEW", width=12, command=self.open_feedback_popup).pack(side="left", padx=2)
         

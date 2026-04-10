@@ -302,3 +302,14 @@ class ExcelHandler:
             except StopIteration:
                 return [] # Empty sheet
             return [c.strip('"') for c in first_line.split(',')]
+            
+    @staticmethod
+    def fetch_json_from_url(url, token=None):
+        """Fetch and parse a JSON file from a remote URL."""
+        headers = {'Accept': 'application/json'}
+        if token:
+            headers['Authorization'] = f'token {token}'
+            
+        r = requests.get(url, headers=headers, timeout=10)
+        r.raise_for_status()
+        return r.json()

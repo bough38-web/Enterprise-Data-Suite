@@ -12,6 +12,7 @@ from utils.excel_io import ExcelHandler
 from utils.data_engine import DataEngine
 from utils.telemetry import TelemetryManager
 from ui.widgets.components import ScrollableFrame, ValueFilterPopup, SheetSelectPopup, create_help_btn
+from utils.preset_manager import PresetManager
 
 class MatchTab(ttk.Frame):
     def __init__(self, parent, config=None, config_path=None):
@@ -36,6 +37,7 @@ class MatchTab(ttk.Frame):
                 base_path = os.path.abspath(os.path.join(base_path, "../.."))
         
         self.presets_file = Path(os.path.join(base_path, "presets.json"))
+        self.preset_manager = PresetManager(self.presets_file)
 
         self.on_load_callback = None
         
@@ -219,7 +221,8 @@ class MatchTab(ttk.Frame):
         self.preset_combo.pack(side="left", expand=True, fill="x", padx=(0, 5))
         self.preset_combo.bind("<<ComboboxSelected>>", self.apply_preset)
         
-        ttk.Button(pre_top, text="적용", command=self.apply_preset, width=5).pack(side="right")
+        ttk.Button(pre_top, text="적용", command=self.apply_preset, width=5).pack(side="left", padx=2)
+        ttk.Button(pre_top, text="🔄", command=self.sync_presets, width=3).pack(side="left", padx=2)
 
         pre_btns = ttk.Frame(pre_lf)
         pre_btns.pack(fill="x", pady=(5, 0))
@@ -421,9 +424,8 @@ class MatchTab(ttk.Frame):
             self.filter_listbox.insert(tk.END, f"[{f['column']}] {m}: {v}")
 
     def load_presets_list(self):
-        if self.presets_file.exists():
-            with open(self.presets_file, 'r', encoding='utf-8') as f:
-                self.preset_combo['values'] = list(json.load(f).keys())
+        presets = self.preset_manager.load_all()
+        self.preset_combo['values'] = list(presets.keys())
 
     def save_current_preset(self):
         name = simpledialog.askstring("프리셋 저장", "새 프리셋 이름을 입력하세요:")
@@ -438,67 +440,84 @@ class MatchTab(ttk.Frame):
             "auto_target": self.auto_target.get()
         }
         
-        presets = {}
-        if self.presets_file.exists():
-            with open(self.presets_file, 'r', encoding='utf-8') as f:
-                presets = json.load(f)
-        
-        presets[name] = preset_data
-        with open(self.presets_file, 'w', encoding='utf-8') as f:
-            json.dump(presets, f, indent=4, ensure_ascii=False)
-            
+        self.preset_manager.add_preset(name, preset_data)
         self.load_presets_list()
         messagebox.showinfo("완료", f"'{name}' 프리셋이 저장되었습니다.")
 
     def apply_preset(self, event=None):
         name = self.preset_var.get()
-        if not name or not self.presets_file.exists(): return
+        if not name: return
         
-        with open(self.presets_file, 'r', encoding='utf-8') as f:
-            presets = json.load(f)
-            p = presets.get(name)
-            if not p: return
-            
-            # Apply Columns
-            for col, var in self.col_vars.items():
-                var.set(col in p.get('columns', []))
-            
-            # Apply Filters
-            self.active_filters = p.get('filters', [])
-            self.update_filter_listbox()
-            self.mode_var.set(p.get('mode', 'keep'))
-            self.auto_target.set(p.get('auto_target', True))
+        presets = self.preset_manager.load_all()
+        p = presets.get(name)
+        if not p: return
+        
+        # Apply Columns
+        for col, var in self.col_vars.items():
+            var.set(col in p.get('columns', []))
+        
+        # Apply Filters
+        self.active_filters = p.get('filters', [])
+        self.update_filter_listbox()
+        self.mode_var.set(p.get('mode', 'keep'))
+        self.auto_target.set(p.get('auto_target', True))
             
         self.set_info(f"프리셋 적용: {name}")
 
+    def sync_presets(self):
+        url = self.config.get('registered_sources', {}).get('remote_presets_url', '')
+        if not url:
+            messagebox.showwarning("경고", "원격 프리셋 URL이 설정되어 있지 않습니다.\n관리자 설정에서 등록하세요.")
+            return
+        
+        def task():
+            try:
+                self.set_info("프리셋 동기화 중...")
+                token = self.config.get('registered_sources', {}).get('github_token', '')
+                success, msg, _count = self.preset_manager.sync_from_remote(url, token)
+                if success:
+                    self.load_presets_list()
+                    messagebox.showinfo("동기화 성공", msg)
+                    self.set_info("동기화 완료")
+                else:
+                    messagebox.showerror("동기화 실패", msg)
+                    self.set_info("실패")
+            except Exception as e:
+                messagebox.showerror("오류", str(e))
+                self.set_info("실패")
+        
+        threading.Thread(target=task, daemon=True).start()
+
     def manage_presets_ui(self):
-        if not self.presets_file.exists(): return
+        presets = self.preset_manager.load_all()
+        if not presets: return
         
         popup = tk.Toplevel(self)
         popup.title("프리셋 관리")
         popup.geometry("300x400")
         popup.grab_set()
         
+        # Center popup
+        sw = self.winfo_screenwidth()
+        sh = self.winfo_screenheight()
+        popup.geometry(f"300x400+{sw//2-150}+{sh//2-200}")
+
         ttk.Label(popup, text="저장된 프리셋 목록", font=("System", 10, "bold")).pack(pady=10)
         
         lb = tk.Listbox(popup)
         lb.pack(fill="both", expand=True, padx=10, pady=5)
         
-        with open(self.presets_file, 'r', encoding='utf-8') as f:
-            presets = json.load(f)
-            for name in presets.keys():
-                lb.insert(tk.END, name)
+        for name in presets.keys():
+            lb.insert(tk.END, name)
         
         def delete_selected():
             sel = lb.curselection()
             if not sel: return
             name = lb.get(sel[0])
             if messagebox.askyesno("삭제 확인", f"'{name}' 프리셋을 삭제할까요?"):
-                del presets[name]
-                with open(self.presets_file, 'w', encoding='utf-8') as f:
-                    json.dump(presets, f, indent=4, ensure_ascii=False)
-                lb.delete(sel[0])
-                self.load_presets_list()
+                if self.preset_manager.delete_preset(name):
+                    lb.delete(sel[0])
+                    self.load_presets_list()
         
         ttk.Button(popup, text="삭제", command=delete_selected).pack(fill="x", padx=10, pady=10)
         ttk.Button(popup, text="닫기", command=popup.destroy).pack(fill="x", padx=10, pady=(0, 10))
