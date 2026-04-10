@@ -130,6 +130,7 @@ class EasyMatchPro(tk.Tk):
         self.load_config()
         
         self.title(f"{self.config['branding']['name']} {self.config['branding']['version']}")
+        self.apply_dpi_scaling()
         self.optimize_window_geometry()
         
         # Apply Theme Immediately (Synchronous for correct first-render on Windows)
@@ -203,7 +204,26 @@ class EasyMatchPro(tk.Tk):
             
             self.geometry(f"{w}x{h}+{x}+{y}")
         except Exception:
-            self.geometry("1300x850")
+            self.geometry("1400x900")
+
+    def apply_dpi_scaling(self):
+        """Forge Tkinter to match system DPI scaling for maximum sharpness on Windows."""
+        if sys.platform == "win32":
+            try:
+                from ctypes import windll
+                # Get the system DPI (Standard is 96)
+                h_dc = windll.user32.GetDC(0)
+                dpi = windll.gdi32.GetDeviceCaps(h_dc, 88) # 88 is LOGPIXELSX
+                windll.user32.ReleaseDC(0, h_dc)
+                
+                # Logic: Tkinter's point system is based on 72 DPI.
+                # Setting scaling factor to DPI / 72.0 ensures 'points' scale perfectly to pixels.
+                scaling_factor = dpi / 72.0
+                self.tk.call('tk', 'scaling', scaling_factor)
+            except Exception as e:
+                print(f"DPI Scaling adjustment failed: {e}")
+                # Fallback to a safe default if calculation fails
+                self.tk.call('tk', 'scaling', 1.5)
 
     def apply_theme(self, theme_name):
         self.config['branding']['theme'] = theme_name
@@ -219,11 +239,13 @@ class EasyMatchPro(tk.Tk):
         header_font = ("Segoe UI", 18, "bold") if sys.platform == "win32" else ("Helvetica", 18, "bold")
         small_font = ("Segoe UI", 9) if sys.platform == "win32" else ("Helvetica", 10)
         
-        # Set default font for all ttk widgets
+        # Set default font for all ttk widgets (using points, not pixels)
         style.configure(".", font=main_font)
         style.configure("Header.TLabel", font=header_font)
         style.configure("Small.TLabel", font=small_font)
         style.configure("Small.TCheckbutton", font=small_font)
+        style.configure("TButton", font=main_font)
+        style.configure("Treeview", font=small_font, rowheight=int(25 * (self.tk.call('tk', 'scaling') / 1.33))) # Scaled row height
         
         # Professional Palette Definition
         palettes = {

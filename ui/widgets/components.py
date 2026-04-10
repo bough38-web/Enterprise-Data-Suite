@@ -40,7 +40,13 @@ class ValueFilterPopup:
     def __init__(self, parent, title, values, selected_values):
         self.top = tk.Toplevel(parent)
         self.top.title(title)
-        self.top.geometry("450x600")
+        
+        # Scale geometry based on DPI
+        scaling = parent.tk.call('tk', 'scaling')
+        w = int(450 * (scaling / 1.33))
+        h = int(600 * (scaling / 1.33))
+        self.top.geometry(f"{w}x{h}")
+        
         self.top.transient(parent)
         self.top.grab_set()
 
@@ -116,13 +122,19 @@ class ValueFilterPopup:
         self.top.destroy()
 
 class SheetSelectPopup:
-    def __init__(self, parent, title, sheet_names):
         self.result = None
         self.top = tk.Toplevel(parent)
         self.top.title(title)
-        self.top.geometry("350x180")
+        
+        # Scale geometry based on DPI
+        scaling = parent.tk.call('tk', 'scaling')
+        w = int(350 * (scaling / 1.33))
+        h = int(180 * (scaling / 1.33))
+        self.top.geometry(f"{w}x{h}")
+        
         self.top.transient(parent)
         self.top.grab_set()
+        
         
         # Set theme background immediately
         try: self.top.configure(bg=parent.winfo_toplevel().cget('bg'))
@@ -152,7 +164,13 @@ class HelpPopup:
     def __init__(self, parent, title, content):
         self.top = tk.Toplevel(parent)
         self.top.title(f"도움말: {title}")
-        self.top.geometry("400x300")
+        
+        # Scale geometry based on DPI
+        scaling = parent.tk.call('tk', 'scaling')
+        w = int(400 * (scaling / 1.33))
+        h = int(300 * (scaling / 1.33))
+        self.top.geometry(f"{w}x{h}")
+        
         self.top.transient(parent)
         self.top.grab_set()
 
