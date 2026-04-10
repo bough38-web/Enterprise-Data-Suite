@@ -204,8 +204,12 @@ class ExcelHandler:
         
         content = io.BytesIO(r.content)
         if url.lower().endswith('.csv'):
-            return pd.read_csv(content, usecols=usecols, low_memory=False, encoding='utf-8-sig',
-                             quoting=csv.QUOTE_NONE, on_bad_lines='warn')
+            df = pd.read_csv(content, usecols=usecols, low_memory=False, encoding='utf-8-sig',
+                             on_bad_lines='warn')
+            # Extra safety: strip literal quotes if they somehow remain
+            for col in df.select_dtypes(include=['object']):
+                df[col] = df[col].astype(str).str.strip('"')
+            return df
         else:
             return pd.read_excel(content, usecols=usecols)
 
@@ -239,8 +243,14 @@ class ExcelHandler:
         r = requests.get(export_url)
         r.raise_for_status()
         
-        return pd.read_csv(io.StringIO(r.text), usecols=usecols, low_memory=False,
-                         quoting=csv.QUOTE_NONE, on_bad_lines='warn')
+        df = pd.read_csv(io.StringIO(r.text), usecols=usecols, low_memory=False,
+                         on_bad_lines='warn')
+        
+        # Extra safety: strip literal quotes if they somehow remain
+        for col in df.select_dtypes(include=['object']):
+            df[col] = df[col].astype(str).str.strip('"')
+        return df
+        
 
     @staticmethod
     def get_google_sheet_list(url):

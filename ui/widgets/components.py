@@ -4,10 +4,22 @@ from tkinter import ttk
 class ScrollableFrame(ttk.Frame):
     def __init__(self, container, horizontal=True, *args, **kwargs):
         super().__init__(container, *args, **kwargs)
-        self.canvas = tk.Canvas(self, highlightthickness=0)
+        self.canvas = tk.Canvas(self, highlightthickness=0, bg="#1E1E1E") # Default dark
         self.v_scrollbar = ttk.Scrollbar(self, orient="vertical", command=self.canvas.yview)
         self.h_scrollbar = ttk.Scrollbar(self, orient="horizontal", command=self.canvas.xview)
         self.scrollable_frame = ttk.Frame(self.canvas)
+        
+        # Function to sync background color with current theme
+        def sync_bg():
+            try:
+                # Try to get background from parent or a known style
+                root = self.winfo_toplevel()
+                if hasattr(root, 'cget'):
+                    self.canvas.configure(bg=root.cget('bg'))
+            except: pass
+            
+        sync_bg()
+        self.after(100, sync_bg) # Double check after render
 
         self.scrollable_frame.bind(
             "<Configure>",
@@ -31,6 +43,10 @@ class ValueFilterPopup:
         self.top.geometry("450x600")
         self.top.transient(parent)
         self.top.grab_set()
+
+        # Set theme background immediately
+        try: self.top.configure(bg=parent.winfo_toplevel().cget('bg'))
+        except: pass
 
         self.result = None
         self.vars = {}
@@ -107,6 +123,10 @@ class SheetSelectPopup:
         self.top.geometry("350x180")
         self.top.transient(parent)
         self.top.grab_set()
+        
+        # Set theme background immediately
+        try: self.top.configure(bg=parent.winfo_toplevel().cget('bg'))
+        except: pass
 
         frame = ttk.Frame(self.top, padding=20)
         frame.pack(fill="both", expand=True)
@@ -135,6 +155,12 @@ class HelpPopup:
         self.top.geometry("400x300")
         self.top.transient(parent)
         self.top.grab_set()
+
+        # Set theme background immediately
+        try:
+            bg_color = parent.winfo_toplevel().cget('bg')
+            self.top.configure(bg=bg_color)
+        except: pass
 
         main = ttk.Frame(self.top, padding=20)
         main.pack(fill="both", expand=True)

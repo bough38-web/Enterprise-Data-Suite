@@ -72,7 +72,10 @@ class SafeSplash(tk.Toplevel):
             logo_img = Image.open(logo_path)
             logo_img = logo_img.resize((200, 200), Image.Resampling.LANCZOS)
             self.logo_photo = ImageTk.PhotoImage(logo_img)
-            ttk.Label(self.container, image=self.logo_photo, background="#001F3F").pack(pady=(40, 10))
+            # Use theme background if possible
+            bg = "#1E1E1E" # Default dark
+            ttk.Label(self.container, image=self.logo_photo, background=bg).pack(pady=(40, 10))
+            self.configure(bg=bg)
         except:
             ttk.Label(self.container, text="[ LOAD ]", font=("System", 70, "bold"), foreground="#00E5FF", background="#001F3F").pack(pady=40)
             
@@ -105,8 +108,11 @@ class EasyMatchPro(tk.Tk):
         self.title(f"{self.config['branding']['name']} {self.config['branding']['version']}")
         self.optimize_window_geometry()
         
-        # Start Theme later
-        self.after_idle(lambda: self.apply_theme(self.config['branding'].get('theme', 'dark')))
+        # Apply Theme Immediately (Synchronous for correct first-render on Windows)
+        self.apply_theme(self.config['branding'].get('theme', 'dark'))
+        
+        # Force redraw to ensure theme engine is ready
+        self.update_idletasks()
         
         # Start Splash
         SafeSplash(self.launch_main)
@@ -191,6 +197,16 @@ class EasyMatchPro(tk.Tk):
         style.configure("TNotebook", background=cfg_bg)
         style.configure("TFrame", background=cfg_bg)
         
+        # Propagate to all open Toplevel windows
+        for child in self.winfo_children():
+            if isinstance(child, tk.Toplevel):
+                child.configure(bg=cfg_bg)
+                # If the child has a .container or .main (common in our popups)
+                for sub in child.winfo_children():
+                    if isinstance(sub, (tk.Frame, ttk.Frame)):
+                        try: sub.configure(style="TFrame")
+                        except: pass
+
         # Update StatsTab if it exists
         if hasattr(self, 'tab_stats'):
             self.tab_stats.update_theme(theme_name)
@@ -224,6 +240,17 @@ class EasyMatchPro(tk.Tk):
         sw = self.winfo_screenwidth()
         sh = self.winfo_screenheight()
         gate.geometry(f"500x550+{sw//2-250}+{sh//2-275}")
+        
+        # Apply theme colors to the Toplevel itself
+        theme_name = self.config['branding'].get('theme', 'dark')
+        palettes = {
+            "dark": {"bg": "#1E1E1E"},
+            "light": {"bg": "#F8F9FA"},
+            "cosmic": {"bg": "#0F172A"},
+            "graphite": {"bg": "#18181B"}
+        }
+        bg_color = palettes.get(theme_name, palettes['dark'])['bg']
+        gate.configure(bg=bg_color)
         
         # UI
         main = ttk.Frame(gate, padding=30)
