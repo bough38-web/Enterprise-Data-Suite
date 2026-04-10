@@ -235,9 +235,18 @@ class AdminSettingsPopup(tk.Toplevel):
         self.theme_combo = ttk.Combobox(theme_frame, textvariable=self.theme_var, values=theme_options, state="readonly", width=15)
         self.theme_combo.pack(side="left", padx=10)
 
-        ttk.Label(main, text="관리자 연락처(이메일):", font=("System", 9)).pack(anchor="w", pady=(10, 0))
         self.admin_contact = tk.StringVar(value=self.config.get('admin_contact', 'bough38@gmail.com'))
-        ttk.Entry(main, textvariable=self.admin_contact).pack(fill="x", pady=2)
+        ent_contact = ttk.Entry(main, textvariable=self.admin_contact)
+        ent_contact.pack(fill="x", pady=2)
+        
+        # macOS clipboard fix for Toplevel entries
+        import sys
+        if sys.platform == "darwin":
+            for entry in [ent_contact, self.theme_combo, self.reg_github, self.reg_google, self.reg_token, self.reg_presets, self.reg_update, self.tel_url]:
+                if hasattr(entry, 'bind'):
+                    entry.bind("<Command-v>", lambda e: e.widget.event_generate("<<Paste>>"))
+                    entry.bind("<Command-c>", lambda e: e.widget.event_generate("<<Copy>>"))
+                    entry.bind("<Command-a>", lambda e: (e.widget.selection_range(0, 'end'), e.widget.icursor('end')))
 
         # Removed duplicate save button at bottom of main frame as it's now fixed
 
@@ -268,6 +277,10 @@ class AdminSettingsPopup(tk.Toplevel):
         with open(self.config_path, 'w', encoding='utf-8') as f:
             json.dump(self.config, f, indent=4, ensure_ascii=False)
             
-        messagebox.showinfo("완료", "설정이 저장되었습니다. 프로그램을 다시 시작해 주세요.")
+        # Update parent's config in memory immediately
+        if hasattr(self.master, 'config'):
+            self.master.config.update(self.config)
+            
+        messagebox.showinfo("완료", "설정이 저장 및 동기화되었습니다.")
         self.destroy()
 
