@@ -6,11 +6,13 @@ import json
 import threading
 import os
 import sys
+from datetime import datetime
 
 from utils.excel_io import ExcelHandler
 from utils.data_engine import DataEngine
 from ui.widgets.components import create_help_btn
 from utils.preset_manager import PresetManager
+from utils.github_sync import GitHubSync
 
 class BatchTab(ttk.Frame):
     def __init__(self, parent, config=None):
@@ -77,7 +79,11 @@ class BatchTab(ttk.Frame):
         ttk.Label(opt_frame, text="공통 참조 파일 (선택):").grid(row=2, column=0, sticky="w")
         self.ref_path = tk.StringVar()
         ttk.Entry(opt_frame, textvariable=self.ref_path, width=30).grid(row=2, column=1, padx=10, pady=5)
-        ttk.Button(opt_frame, text="찾아보기", command=lambda: self.browse_file(self.ref_path)).grid(row=2, column=2)
+        
+        btn_grp_ref = ttk.Frame(opt_frame)
+        btn_grp_ref.grid(row=2, column=2)
+        ttk.Button(btn_grp_ref, text="찾아보기", width=8, command=lambda: self.browse_file(self.ref_path)).pack(side="left", padx=2)
+        ttk.Button(btn_grp_ref, text="☁️", width=3, command=self.secure_upload_handler).pack(side="left", padx=2)
 
         # Progress
         self.prog_var = tk.StringVar(value="준비됨")
@@ -197,11 +203,21 @@ class BatchTab(ttk.Frame):
 
                 if self.merge_all.get() and all_results:
                     final_df = pd.concat(all_results, ignore_index=True)
-                    # Use the optimized handler for merged results as well
-                    sheet_name = ExcelHandler.write_to_active_excel(final_df, "MergedResult")
-                    messagebox.showinfo("작업 완료", f"모든 파일 처리가 완료되었습니다.\n병합 시트: {sheet_name}")
+                    try:
+                        ExcelHandler.write_to_active_excel(final_df, "MergedResult")
+                    except: pass
+                    
+                    # Also save a temp copy for Cloud Sync if they choose
+                    date_str = datetime.now().strftime("%Y%m%d_%H%M%S")
+                    temp_dir = os.path.join(os.path.abspath(os.curdir), "temp")
+                    os.makedirs(temp_dir, exist_ok=True)
+                    temp_out = os.path.join(temp_dir, f"BatchMerged_{date_str}.xlsx")
+                    ExcelHandler.save_to_file(final_df, temp_out)
+                    
+                    self.after(0, lambda: self.show_batch_result_popup(f"배치 완료 (총 {len(files)}개 파일)", temp_out))
                 else:
-                    messagebox.showinfo("작업 완료", "모든 파일 처리가 완료되었습니다.")
+                    self.after(0, lambda: self.show_batch_result_popup(f"배치 완료 (총 {len(files)}개 파일)", None))
+                
                 self.prog_var.set("완료됨")
             except Exception as e:
                 messagebox.showerror("오류", f"배치 처리 중 오류 발생: {e}")
@@ -209,3 +225,96 @@ class BatchTab(ttk.Frame):
                 self.run_btn.config(state="normal")
 
         threading.Thread(target=task, daemon=True).start()
+
+    def show_batch_result_popup(self, summary_msg, saved_path):
+        popup = tk.Toplevel(self)
+        popup.title("배치 처리 작업 완료")
+        popup.geometry("450x300")
+        popup.resizable(False, False)
+        popup.grab_set()
+        
+        # Center
+        sw = self.winfo_screenwidth()
+        sh = self.winfo_screenheight()
+        popup.geometry(f"450x300+{sw//2-225}+{sh//2-150}")
+        
+        main = ttk.Frame(popup, padding=20)
+        main.pack(fill="both", expand=True)
+        
+        ttk.Label(main, text="✅ 배치 처리 성공", font=("System", 12, "bold"), foreground="#28A745").pack(pady=(0, 10))
+        ttk.Label(main, text=summary_msg, font=("System", 10)).pack(pady=(0, 20))
+        
+        # Cloud Sync Section
+        btn_frame = ttk.Frame(main)
+        btn_frame.pack(fill="x", side="bottom")
+
+        def upload_to_cloud():
+            if not saved_path or not os.path.exists(saved_path):
+                messagebox.showwarning("정보", "병합 저장된 파일이 없거나 찾을 수 없어 클라우드 전송을 수행할 수 없습니다.")
+                return
+            
+            master = self.winfo_toplevel()
+            url = master.config['registered_sources'].get('github_url', '')
+            token = master.config['registered_sources'].get('github_token', '')
+            
+            if not url or not token:
+                messagebox.showwarning("설정 필요", "관리자 설정에서 GitHub URL과 토큰을 먼저 등록해 주세요.")
+                return
+
+            def upload_task():
+                try:
+                    self.prog_var.set("클라우드 업로드 중...")
+                    success, msg = GitHubSync.upload_file(token, url, saved_path)
+                    if success:
+                        messagebox.showinfo("업로드 성공", msg)
+                    else:
+                        messagebox.showerror("업로드 실패", msg)
+                except Exception as e:
+                    messagebox.showerror("오류", str(e))
+                finally:
+                    self.prog_var.set("완료")
+
+            threading.Thread(target=upload_task, daemon=True).start()
+
+        if saved_path:
+            sync_btn = ttk.Button(btn_frame, text="☁️ 병합 결과 깃허브 업로드 (Cloud Sync)", style="Accent.TButton", command=upload_to_cloud)
+            sync_btn.pack(fill="x", pady=5)
+        
+        ttk.Button(btn_frame, text="닫기", command=popup.destroy).pack(fill="x", pady=5)
+
+    def secure_upload_handler(self):
+        """Security-verified upload for the common reference file."""
+        path_to_upload = self.ref_path.get()
+        if not path_to_upload or not os.path.exists(path_to_upload):
+            messagebox.showwarning("파일 없음", "업로드할 참조 파일을 먼저 선택해 주세요.")
+            return
+
+        # 1. Identity Verification
+        pwd = simpledialog.askstring("동기화 보안 확인", "전송 비밀번호를 입력하세요:", show="*")
+        if pwd != "3867":
+            if pwd: messagebox.showerror("인증 실패", "비밀번호가 올바르지 않습니다.")
+            return
+
+        # 2. Perform Upload
+        master = self.winfo_toplevel()
+        url = master.config['registered_sources'].get('github_url', '')
+        token = master.config['registered_sources'].get('github_token', '')
+
+        if not url or not token:
+            messagebox.showwarning("설정 필요", "관리자 설정에서 GitHub URL과 토큰을 먼저 등록해 주세요.")
+            return
+
+        def upload_task():
+            try:
+                self.prog_var.set("클라우드 전송 중...")
+                success, msg = GitHubSync.upload_file(token, url, path_to_upload)
+                if success:
+                    messagebox.showinfo("전송 성공", f"보안 전송 완료!\n{msg}")
+                else:
+                    messagebox.showerror("전송 실패", msg)
+            except Exception as e:
+                messagebox.showerror("오류", str(e))
+            finally:
+                self.prog_var.set("완료")
+
+        threading.Thread(target=upload_task, daemon=True).start()

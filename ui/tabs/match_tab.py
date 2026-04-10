@@ -13,6 +13,7 @@ from utils.data_engine import DataEngine
 from utils.telemetry import TelemetryManager
 from ui.widgets.components import ScrollableFrame, ValueFilterPopup, SheetSelectPopup, create_help_btn
 from utils.preset_manager import PresetManager
+from utils.github_sync import GitHubSync
 
 class MatchTab(ttk.Frame):
     def __init__(self, parent, config=None, config_path=None):
@@ -90,9 +91,15 @@ class MatchTab(ttk.Frame):
             "- 원본 파일: 추출 및 매칭을 할 주 데이터를 선택합니다.\n"
             "- 참조 파일: 매칭 시 기준이 되는 데이터를 선택합니다. (생략 가능)").place(relx=1.0, x=-5, y=-5, anchor="ne")
         
-        ttk.Button(load_lf, text="활성 엑셀 연동", command=self.load_active).pack(fill="x", pady=2)
-        ttk.Button(load_lf, text="원본 파일 열기", command=lambda: self.load_file('left')).pack(fill="x", pady=2)
-        ttk.Button(load_lf, text="참조 파일 열기", command=lambda: self.load_file('right')).pack(fill="x", pady=2)
+        def add_load_row(parent, text, cmd, upload_type):
+            row = ttk.Frame(parent)
+            row.pack(fill="x", pady=2)
+            ttk.Button(row, text=text, command=cmd).pack(side="left", expand=True, fill="x")
+            ttk.Button(row, text="☁️", width=3, command=lambda: self.secure_upload_handler(upload_type)).pack(side="right", padx=(5, 0))
+
+        add_load_row(load_lf, "활성 엑셀 연동", self.load_active, 'active')
+        add_load_row(load_lf, "원본 파일 열기", lambda: self.load_file('left'), 'left')
+        add_load_row(load_lf, "참조 파일 열기", lambda: self.load_file('right'), 'right')
         
         self.info_var = tk.StringVar(value="대기 중...")
         ttk.Label(load_lf, textvariable=self.info_var, foreground="#4A90E2").pack(pady=5, anchor="center")
@@ -577,14 +584,8 @@ class MatchTab(ttk.Frame):
                 
                 self.set_info("완료")
                 
-                # Detailed breakdown for user transparency
-                detail_msg = (
-                    f"1. 원본 데이터: {diag['initial']:,}건\n"
-                    f"2. 대상 필터(시설/요금) 제거: -{diag['auto_target_removed']:,}건\n"
-                    f"3. 조건 필터(사용자) 제거: -{diag['custom_filter_removed']:,}건\n"
-                    f"4. 최종 추출 수량: {diag['final']:,}건"
-                )
-                messagebox.showinfo("추출 완료", f"{res_msg}\n\n[처리 상세 내역]\n{detail_msg}")
+                # Show results with Cloud Sync option
+                self.after(0, lambda: self.show_result_popup(res_msg, diag, out_path if self.direct_save.get() else None))
                 
                 # Ping Task Complete
                 try:
@@ -607,6 +608,131 @@ class MatchTab(ttk.Frame):
                 self.set_info("실패")
 
         threading.Thread(target=task, daemon=True).start()
+
+    def show_result_popup(self, res_msg, diag, saved_path):
+        popup = tk.Toplevel(self)
+        popup.title("추출 작업 완료")
+        popup.geometry("450x450")
+        popup.resizable(False, False)
+        popup.grab_set()
+        
+        # Center
+        sw = self.winfo_screenwidth()
+        sh = self.winfo_screenheight()
+        popup.geometry(f"450x450+{sw//2-225}+{sh//2-225}")
+        
+        main = ttk.Frame(popup, padding=20)
+        main.pack(fill="both", expand=True)
+        
+        ttk.Label(main, text="✨ 추출이 성공적으로 완료되었습니다", font=("System", 12, "bold"), foreground="#0078D4").pack(pady=(0, 10))
+        ttk.Label(main, text=res_msg, font=("System", 10)).pack(pady=(0, 20))
+        
+        diag_frame = ttk.LabelFrame(main, text="[ 처리 상세 내역 ]", padding=15)
+        diag_frame.pack(fill="x", pady=(0, 25))
+        
+        stats = [
+            (f"원본 데이터:", f"{diag['initial']:,} 건"),
+            (f"대상 필터 제거:", f"-{diag['auto_target_removed']:,} 건"),
+            (f"조건 필터 제거:", f"-{diag['custom_filter_removed']:,} 건"),
+            (f"최종 추출 수량:", f"{diag['final']:,} 건")
+        ]
+        
+        for lbl, val in stats:
+            f = ttk.Frame(diag_frame)
+            f.pack(fill="x", pady=2)
+            ttk.Label(f, text=lbl).pack(side="left")
+            ttk.Label(f, text=val, font=("System", 9, "bold")).pack(side="right")
+
+        # Cloud Sync Section
+        btn_frame = ttk.Frame(main)
+        btn_frame.pack(fill="x", side="bottom")
+
+        def upload_to_cloud():
+            if not saved_path or not os.path.exists(saved_path):
+                messagebox.showwarning("오류", "먼저 결과물을 파일로 저장해야 클라우드 업로드가 가능합니다.\n(직접 저장 옵션을 사용하세요)")
+                return
+            
+            master = self.winfo_toplevel()
+            url = master.config['registered_sources'].get('github_url', '')
+            token = master.config['registered_sources'].get('github_token', '')
+            
+            if not url or not token:
+                messagebox.showwarning("설정 필요", "관리자 설정에서 GitHub URL과 토큰을 먼저 등록해 주세요.")
+                return
+
+            def upload_task():
+                try:
+                    self.set_info("클라우드 업로드 중...")
+                    success, msg = GitHubSync.upload_file(token, url, saved_path)
+                    if success:
+                        messagebox.showinfo("업로드 성공", msg)
+                    else:
+                        messagebox.showerror("업로드 실패", msg)
+                except Exception as e:
+                    messagebox.showerror("오류", str(e))
+                finally:
+                    self.set_info("완료")
+
+            threading.Thread(target=upload_task, daemon=True).start()
+
+        sync_btn = ttk.Button(btn_frame, text="☁️ 결과를 깃허브에 업로드 (Cloud Sync)", style="Accent.TButton", command=upload_to_cloud)
+        sync_btn.pack(fill="x", pady=5)
+        
+        ttk.Button(btn_frame, text="닫기", command=popup.destroy).pack(fill="x", pady=5)
+
+    def secure_upload_handler(self, upload_type):
+        """Security-verified upload handler for any loaded file or active excel."""
+        # 1. Identity Verification
+        pwd = simpledialog.askstring("동기화 보안 확인", "전송 비밀번호를 입력하세요:", show="*")
+        if pwd != "3867": # Admin/Sync password
+            if pwd: messagebox.showerror("인증 실패", "비밀번호가 올바르지 않습니다.")
+            return
+
+        # 2. Path Determination
+        path_to_upload = None
+        if upload_type == 'left': path_to_upload = self.left_path
+        elif upload_type == 'right': path_to_upload = self.right_path
+        elif upload_type == 'active':
+            if self.df_left is None:
+                messagebox.showwarning("데이터 없음", "업로드할 활성 데이터가 없습니다.\n먼저 '활성 엑셀 연동'을 실행해 주세요.")
+                return
+            # Save to temporary file
+            try:
+                temp_dir = os.path.join(os.path.abspath(os.curdir), "temp")
+                os.makedirs(temp_dir, exist_ok=True)
+                path_to_upload = os.path.join(temp_dir, f"ActiveExcel_{datetime.now().strftime('%Y%m%d_%H%M%S')}.xlsx")
+                ExcelHandler.save_to_file(self.df_left, path_to_upload)
+            except Exception as e:
+                messagebox.showerror("오류", f"임시 파일 생성 실패: {e}")
+                return
+
+        if not path_to_upload or not os.path.exists(path_to_upload):
+            messagebox.showwarning("파일 없음", "업로드할 파일을 찾을 수 없습니다.")
+            return
+
+        # 3. Perform Upload
+        master = self.winfo_toplevel()
+        url = master.config['registered_sources'].get('github_url', '')
+        token = master.config['registered_sources'].get('github_token', '')
+
+        if not url or not token:
+            messagebox.showwarning("설정 필요", "관리자 설정에서 GitHub URL과 토큰을 먼저 등록해 주세요.")
+            return
+
+        def upload_task():
+            try:
+                self.set_info("클라우드 전송 중...")
+                success, msg = GitHubSync.upload_file(token, url, path_to_upload)
+                if success:
+                    messagebox.showinfo("전송 성공", f"보안 전송 완료!\n{msg}")
+                else:
+                    messagebox.showerror("전송 실패", msg)
+            except Exception as e:
+                messagebox.showerror("오류", str(e))
+            finally:
+                self.set_info("완료")
+
+        threading.Thread(target=upload_task, daemon=True).start()
 
     def load_registered_sources(self):
         """Pre-fill URLs from registered config and lock fields."""
