@@ -12,9 +12,15 @@ from PIL import Image, ImageTk
 if sys.platform == "win32":
     try:
         from ctypes import windll
+        # Set DPI awareness to 'System DPI Aware' (1) or 'Per-monitor' (2)
+        # 1 is usually safer for Tkinter layout consistency
         windll.shcore.SetProcessDpiAwareness(1)
     except Exception:
-        pass
+        try:
+            # Fallback for older Windows versions
+            windll.user32.SetProcessDPIAware()
+        except Exception:
+            pass
 
 # Add local directories to path to ensure imports work correctly
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -66,30 +72,44 @@ class SafeSplash(tk.Toplevel):
         self.container = tk.Frame(self, bg="#001F3F")
         self.container.pack(fill="both", expand=True)
         
-        # Logo
+        # Professional Typography for Splash
+        splash_font_main = ("Segoe UI", 32, "bold") if sys.platform == "win32" else ("Helvetica", 32, "bold")
+        splash_font_sub = ("Segoe UI", 10) if sys.platform == "win32" else ("Helvetica", 10)
+        splash_accent = "#00E5FF"
+        splash_bg = "#001F3F"
+
         try:
             logo_path = get_resource_path("assets/logo.png")
             logo_img = Image.open(logo_path)
-            logo_img = logo_img.resize((200, 200), Image.Resampling.LANCZOS)
+            # Higher quality scaling
+            logo_img = logo_img.resize((220, 220), Image.Resampling.LANCZOS)
             self.logo_photo = ImageTk.PhotoImage(logo_img)
-            # Use theme background if possible
-            bg = "#1E1E1E" # Default dark
-            ttk.Label(self.container, image=self.logo_photo, background=bg).pack(pady=(40, 10))
-            self.configure(bg=bg)
+            ttk.Label(self.container, image=self.logo_photo, background=splash_bg).pack(pady=(50, 10))
         except:
-            ttk.Label(self.container, text="[ LOAD ]", font=("System", 70, "bold"), foreground="#00E5FF", background="#001F3F").pack(pady=40)
+            ttk.Label(self.container, text="EM", font=("Segoe UI", 80, "bold"), foreground=splash_accent, background=splash_bg).pack(pady=40)
             
-        ttk.Label(self.container, text="EasyMatch", font=("System", 32, "bold"), foreground="white", background="#001F3F").pack()
-        ttk.Label(self.container, text="Powered by Advanced Data IQ", font=("System", 10), foreground="#00E5FF", background="#001F3F").pack(pady=10)
+        ttk.Label(self.container, text="EasyMatch Pro", font=splash_font_main, foreground="white", background=splash_bg).pack()
+        ttk.Label(self.container, text="Powered by Advanced Data IQ", font=splash_font_sub, foreground=splash_accent, background=splash_bg).pack(pady=(5, 20))
         
-        self.progress = ttk.Progressbar(self.container, mode='determinate', length=400)
-        self.progress.pack(pady=20)
+        self.progress = ttk.Progressbar(self.container, mode='determinate', length=420)
+        self.progress.pack(pady=10)
+        
+        self.status_label = ttk.Label(self.container, text="Initializing components...", font=splash_font_sub, foreground="gray", background=splash_bg)
+        self.status_label.pack()
+
         self.progress_val = 0
 
     def start_loading(self):
         if self.progress_val < 100:
             self.progress_val += 4
             self.progress['value'] = self.progress_val
+            
+            # Dynamic status text
+            if self.progress_val < 30: self.status_label.config(text="Loading system resources...")
+            elif self.progress_val < 60: self.status_label.config(text="Linking data engines...")
+            elif self.progress_val < 90: self.status_label.config(text="Optimizing workspace...")
+            else: self.status_label.config(text="Ready to launch!")
+            
             self.after(50, self.start_loading)
         else:
             self.after(500, self.finish)
@@ -111,6 +131,16 @@ class EasyMatchPro(tk.Tk):
         # Apply Theme Immediately (Synchronous for correct first-render on Windows)
         self.apply_theme(self.config['branding'].get('theme', 'dark'))
         
+        # Set Window Icon
+        try:
+            icon_path = get_resource_path("assets/logo.png")
+            if os.path.exists(icon_path):
+                img = Image.open(icon_path)
+                self.icon_photo = ImageTk.PhotoImage(img)
+                self.iconphoto(True, self.icon_photo)
+        except Exception:
+            pass
+
         # Force redraw to ensure theme engine is ready
         self.update_idletasks()
         
@@ -150,13 +180,18 @@ class EasyMatchPro(tk.Tk):
             sw = self.winfo_screenwidth()
             sh = self.winfo_screenheight()
             
-            # Target 85% of screen but with reasonable bounds
-            w = int(sw * 0.85)
-            h = int(sh * 0.85)
+            # Calculate targets based on screen size
+            w = int(sw * 0.8)
+            h = int(sh * 0.8)
             
-            # Clamp limits (Min 1350x850, Max 1600x1000 for comfort)
-            w = max(1350, min(w, 1600))
-            h = max(850, min(h, 1000))
+            # Refined Clamp limits for diverse screen resolutions (Laptop/Desktop)
+            # Min: 1200x800 (Safer for smaller laptops), Max: 1600x950
+            w = max(1200, min(w, 1600))
+            h = max(750, min(h, 950))
+            
+            # Ensure it doesn't exceed actual screen resolution if very low (rare)
+            w = min(w, sw - 40)
+            h = min(h, sh - 80)
             
             # Center it
             x = (sw - w) // 2
@@ -164,7 +199,7 @@ class EasyMatchPro(tk.Tk):
             
             self.geometry(f"{w}x{h}+{x}+{y}")
         except Exception:
-            self.geometry("1450x900")
+            self.geometry("1300x850")
 
     def apply_theme(self, theme_name):
         self.config['branding']['theme'] = theme_name

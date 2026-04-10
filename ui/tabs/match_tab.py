@@ -7,6 +7,7 @@ import threading
 import os
 import sys
 
+import xlwings as xw
 from utils.excel_io import ExcelHandler
 from utils.data_engine import DataEngine
 from utils.telemetry import TelemetryManager
