@@ -210,7 +210,18 @@ class AdminSettingsPopup(tk.Toplevel):
         ttk.Button(reg_frame, text="프로그램 업데이트 확인 (Check Version)", command=manual_check_update).pack(fill="x", pady=5)
         
         ttk.Label(main, text="기타 관리 설정", font=("System", 11, "bold")).pack(pady=(20, 10))
-        ttk.Label(main, text="관리자 연락처(이메일):", font=("System", 9)).pack(anchor="w")
+        
+        # Theme Selection
+        theme_frame = ttk.Frame(main)
+        theme_frame.pack(fill="x", pady=5)
+        ttk.Label(theme_frame, text="프로그램 테마 설정:", font=("System", 9)).pack(side="left")
+        
+        self.theme_var = tk.StringVar(value=self.config.get('branding', {}).get('theme', 'forest'))
+        theme_options = ["royal", "forest", "arctic", "crimson", "dark", "light"]
+        self.theme_combo = ttk.Combobox(theme_frame, textvariable=self.theme_var, values=theme_options, state="readonly", width=15)
+        self.theme_combo.pack(side="left", padx=10)
+
+        ttk.Label(main, text="관리자 연락처(이메일):", font=("System", 9)).pack(anchor="w", pady=(10, 0))
         self.admin_contact = tk.StringVar(value=self.config.get('admin_contact', 'bough38@gmail.com'))
         ttk.Entry(main, textvariable=self.admin_contact).pack(fill="x", pady=2)
 
@@ -234,6 +245,10 @@ class AdminSettingsPopup(tk.Toplevel):
         
         # Save Admin Contact
         self.config['admin_contact'] = self.admin_contact.get().strip()
+        
+        # Save Theme
+        if 'branding' not in self.config: self.config['branding'] = {}
+        self.config['branding']['theme'] = self.theme_var.get()
             
         with open(self.config_path, 'w', encoding='utf-8') as f:
             json.dump(self.config, f, indent=4, ensure_ascii=False)

@@ -79,8 +79,8 @@ class MatchTab(ttk.Frame):
         
         # All widgets now go to self.sidebar.scrollable_frame
         sf = self.sidebar.scrollable_frame
-        # Increased padding to look more balanced
-        p_frame = ttk.Frame(sf, padding=(15, 5, 15, 15))
+        # Increased padding for a more spacious, premium feel
+        p_frame = ttk.Frame(sf, padding=(25, 20, 25, 25))
         p_frame.pack(fill="both", expand=True)
 
         # 2. Data Source
@@ -105,8 +105,8 @@ class MatchTab(ttk.Frame):
         ttk.Label(load_lf, textvariable=self.info_var, foreground="#4A90E2").pack(pady=5, anchor="center")
 
         # 3. Cloud Source (GitHub Raw)
-        cloud_lf = ttk.LabelFrame(p_frame, text="클라우드 소스 (GitHub Raw)", padding=12, labelanchor="n")
-        cloud_lf.pack(fill="x", pady=(0, 15))
+        cloud_lf = ttk.LabelFrame(p_frame, text="클라우드 소스 (GitHub Raw)", padding=15, labelanchor="n")
+        cloud_lf.pack(fill="x", pady=(10, 20))
         
         cloud_title_frame = ttk.Frame(cloud_lf)
         cloud_title_frame.pack(fill="x", pady=(0, 5))
@@ -139,8 +139,8 @@ class MatchTab(ttk.Frame):
         ttk.Button(c_btns, text="선택 다운로드", command=self.download_cloud).pack(side="left", expand=True, fill="x", padx=2)
 
         # 4. Google Sheets Source
-        gs_lf = ttk.LabelFrame(p_frame, text="구글 스프레드시트 연동", padding=12, labelanchor="n")
-        gs_lf.pack(fill="x", pady=(0, 15))
+        gs_lf = ttk.LabelFrame(p_frame, text="구글 스프레드시트 연동", padding=15, labelanchor="n")
+        gs_lf.pack(fill="x", pady=(10, 20))
         
         gs_title_frame = ttk.Frame(gs_lf)
         gs_title_frame.pack(fill="x", pady=(0, 5))

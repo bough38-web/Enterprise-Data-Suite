@@ -234,35 +234,48 @@ class EasyMatchPro(tk.Tk):
         
         style = ttk.Style(self)
         
-        # Define Global Typography
-        main_font = ("Segoe UI", 10) if sys.platform == "win32" else ("Helvetica", 11)
-        header_font = ("Segoe UI", 18, "bold") if sys.platform == "win32" else ("Helvetica", 18, "bold")
-        small_font = ("Segoe UI", 9) if sys.platform == "win32" else ("Helvetica", 10)
+        # Define Global Typography (Premium Hierarchy)
+        font_family = "Segoe UI" if sys.platform == "win32" else "Helvetica"
+        main_font = (font_family, 10)
+        header_font = (font_family, 20, "bold")
+        sub_header_font = (font_family, 12, "bold")
+        small_font = (font_family, 9)
         
         # Set default font for all ttk widgets (using points, not pixels)
         style.configure(".", font=main_font)
         style.configure("Header.TLabel", font=header_font)
+        style.configure("SubHeader.TLabel", font=sub_header_font)
         style.configure("Small.TLabel", font=small_font)
         style.configure("Small.TCheckbutton", font=small_font)
         style.configure("TButton", font=main_font)
-        style.configure("Treeview", font=small_font, rowheight=int(25 * (self.tk.call('tk', 'scaling') / 1.33))) # Scaled row height
+        style.configure("Treeview", font=small_font, rowheight=int(28 * (self.tk.call('tk', 'scaling') / 1.33))) # Increased row height for premium feel
         
-        # Professional Palette Definition
+        # Professional Palette Definition (Premium High-Contrast)
         palettes = {
-            "dark": {"bg": "#1E1E1E", "accent": "#4A90E2"},     # VS Code inspired
-            "light": {"bg": "#F8F9FA", "accent": "#4A90E2"},    # Modern Clean
-            "cosmic": {"bg": "#0F172A", "accent": "#818CF8"},   # Midnight Blue (Soft Indigo)
-            "graphite": {"bg": "#18181B", "accent": "#71717A"}  # Zinc Grey
+            "royal": {"bg": "#0F172A", "accent": "#FBDB78", "base": "dark"},    # Midnight Royal (Navy & Gold)
+            "forest": {"bg": "#0D1117", "accent": "#10B981", "base": "dark"},   # Forest Graphite (Emerald)
+            "arctic": {"bg": "#F9FAFB", "accent": "#2563EB", "base": "light"},  # Arctic Clean (Snow & Blue)
+            "crimson": {"bg": "#000000", "accent": "#E11D48", "base": "dark"},  # Obsidian Crimson (Black & Red)
+            "dark": {"bg": "#1E1E1E", "accent": "#4A90E2", "base": "dark"},
+            "light": {"bg": "#F8F9FA", "accent": "#4A90E2", "base": "light"}
         }
         
-        p = palettes.get(theme_name, palettes['dark'])
+        p = palettes.get(theme_name, palettes['forest'])
         cfg_bg = p['bg']
         cfg_accent = p['accent']
+        base_theme = p['base']
+        
+        # Base Theme (Standard sv-ttk)
+        sv_ttk.set_theme(base_theme)
         
         # Apply Logic
         self.configure(bg=cfg_bg)
-        style.configure("Accent.TButton", background=cfg_accent, foreground="white")
+        style.configure("Accent.TButton", background=cfg_accent, foreground="white" if base_theme == "dark" else "black")
         style.map("Accent.TButton", background=[("active", cfg_accent), ("pressed", cfg_accent)])
+        
+        # Trello-style LabelFrame refinement
+        style.configure("TLabelframe", background=cfg_bg, bordercolor="#333333" if base_theme == "dark" else "#CCCCCC")
+        style.configure("TLabelframe.Label", background=cfg_bg, foreground=cfg_accent, font=sub_header_font)
         
         # Header/Notebook Tweaks for Comfort
         style.configure("TNotebook", background=cfg_bg)
