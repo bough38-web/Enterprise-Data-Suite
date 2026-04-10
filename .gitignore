@@ -37,3 +37,10 @@ ENV/
 # OS
 .DS_Store
 Thumbs.db
+
+# Config & Sensitive
+config.json
+scratch/
+*.tmp
+*.new
+update_swap.bat

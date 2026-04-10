@@ -1,0 +1,31 @@
+{
+    "locked_features": {
+        "batch_tab": false,
+        "cleaner_tab": false,
+        "cloud_source": false,
+        "google_sheets": false
+    },
+    "branding": {
+        "name": "EasyMatch",
+        "version": "v1.0 Template",
+        "theme": "dark"
+    },
+    "telemetry": {
+        "enabled": false,
+        "url": ""
+    },
+    "license_key": "YOUR-LICENSE-KEY-HERE",
+    "user_info": {
+        "name": "YOUR-NAME",
+        "email": "YOUR-EMAIL"
+    },
+    "registered_sources": {
+        "github_url": "",
+        "github_token": "",
+        "google_sheets_url": "",
+        "google_sheet_names": "",
+        "remote_presets_url": "",
+        "remote_update_url": ""
+    },
+    "admin_contact": "bough38@gmail.com"
+}
