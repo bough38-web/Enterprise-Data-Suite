@@ -10,7 +10,7 @@ class AdminSettingsPopup(tk.Toplevel):
     def __init__(self, parent):
         super().__init__(parent)
         self.title("Administrator Settings")
-        self.geometry("450x700")
+        self.geometry("480x850") # Slightly wider and taller
         
         # Inherit stable config path from parent app
         if hasattr(parent, 'config_path'):
@@ -50,7 +50,17 @@ class AdminSettingsPopup(tk.Toplevel):
             self.pw_var.set("")
 
     def build_settings_ui(self):
-        main = ttk.Frame(self, padding=20)
+        # 1. Action Buttons Frame (Fixed at bottom)
+        btn_frame = ttk.Frame(self, padding=10)
+        btn_frame.pack(side="bottom", fill="x")
+        ttk.Button(btn_frame, text="저장 및 닫기", command=self.save_and_close, style="Accent.TButton").pack(fill="x")
+
+        # 2. Scrollable Content Area
+        from ui.widgets.components import ScrollableFrame
+        self.scroll_area = ScrollableFrame(self)
+        self.scroll_area.pack(fill="both", expand=True)
+        
+        main = ttk.Frame(self.scroll_area.scrollable_frame, padding=25)
         main.pack(fill="both", expand=True)
         
         ttk.Label(main, text="[ CONFIG ] 기능 제한 설정 (EasyMatch Pro)", font=("System", 12, "bold")).pack(pady=(0, 20))
@@ -160,6 +170,10 @@ class AdminSettingsPopup(tk.Toplevel):
         self.reg_google = tk.StringVar(value=reg.get('google_sheets_url', ''))
         ttk.Entry(reg_frame, textvariable=self.reg_google).pack(fill="x", pady=2)
         
+        ttk.Label(reg_frame, text="GitHub Access Token (업로드용):", font=("System", 9, "bold")).pack(anchor="w", pady=(5, 0))
+        self.reg_token = tk.StringVar(value=reg.get('github_token', ''))
+        ttk.Entry(reg_frame, textvariable=self.reg_token, show="*").pack(fill="x", pady=2)
+        
         ttk.Label(reg_frame, text="원격 프리셋(Preset) URL (Raw JSON):", font=("System", 9, "bold")).pack(anchor="w", pady=(5, 0))
         self.reg_presets = tk.StringVar(value=reg.get('remote_presets_url', ''))
         ttk.Entry(reg_frame, textvariable=self.reg_presets).pack(fill="x", pady=2)
@@ -225,7 +239,7 @@ class AdminSettingsPopup(tk.Toplevel):
         self.admin_contact = tk.StringVar(value=self.config.get('admin_contact', 'bough38@gmail.com'))
         ttk.Entry(main, textvariable=self.admin_contact).pack(fill="x", pady=2)
 
-        ttk.Button(btn_frame, text="저장 및 닫기", command=self.save_and_close).pack(fill="x")
+        # Removed duplicate save button at bottom of main frame as it's now fixed
 
 
     def save_and_close(self):
@@ -239,6 +253,7 @@ class AdminSettingsPopup(tk.Toplevel):
         
         # Save Registered Sources
         self.config['registered_sources']['github_url'] = self.reg_github.get().strip()
+        self.config['registered_sources']['github_token'] = self.reg_token.get().strip()
         self.config['registered_sources']['google_sheets_url'] = self.reg_google.get().strip()
         self.config['registered_sources']['remote_presets_url'] = self.reg_presets.get().strip()
         self.config['registered_sources']['remote_update_url'] = self.reg_update.get().strip()

@@ -95,7 +95,7 @@ class MatchTab(ttk.Frame):
             row = ttk.Frame(parent)
             row.pack(fill="x", pady=2)
             ttk.Button(row, text=text, command=cmd).pack(side="left", expand=True, fill="x")
-            ttk.Button(row, text="☁️", width=3, command=lambda: self.secure_upload_handler(upload_type)).pack(side="right", padx=(5, 0))
+            ttk.Button(row, text="(Cloud)", width=8, command=lambda: self.secure_upload_handler(upload_type)).pack(side="right", padx=(5, 0))
 
         add_load_row(load_lf, "활성 엑셀 연동", self.load_active, 'active')
         add_load_row(load_lf, "원본 파일 열기", lambda: self.load_file('left'), 'left')
@@ -229,7 +229,7 @@ class MatchTab(ttk.Frame):
         self.preset_combo.bind("<<ComboboxSelected>>", self.apply_preset)
         
         ttk.Button(pre_top, text="적용", command=self.apply_preset, width=5).pack(side="left", padx=2)
-        ttk.Button(pre_top, text="🔄", command=self.sync_presets, width=3).pack(side="left", padx=2)
+        ttk.Button(pre_top, text="(Sync)", command=self.sync_presets, width=6).pack(side="left", padx=2)
 
         pre_btns = ttk.Frame(pre_lf)
         pre_btns.pack(fill="x", pady=(5, 0))
@@ -624,7 +624,7 @@ class MatchTab(ttk.Frame):
         main = ttk.Frame(popup, padding=20)
         main.pack(fill="both", expand=True)
         
-        ttk.Label(main, text="✨ 추출이 성공적으로 완료되었습니다", font=("System", 12, "bold"), foreground="#0078D4").pack(pady=(0, 10))
+        ttk.Label(main, text=">> 추출이 성공적으로 완료되었습니다", font=("System", 12, "bold"), foreground="#0078D4").pack(pady=(0, 10))
         ttk.Label(main, text=res_msg, font=("System", 10)).pack(pady=(0, 20))
         
         diag_frame = ttk.LabelFrame(main, text="[ 처리 상세 내역 ]", padding=15)
@@ -675,7 +675,7 @@ class MatchTab(ttk.Frame):
 
             threading.Thread(target=upload_task, daemon=True).start()
 
-        sync_btn = ttk.Button(btn_frame, text="☁️ 결과를 깃허브에 업로드 (Cloud Sync)", style="Accent.TButton", command=upload_to_cloud)
+        sync_btn = ttk.Button(btn_frame, text="(Cloud) 결과를 깃허브에 업로드 (Sync)", style="Accent.TButton", command=upload_to_cloud)
         sync_btn.pack(fill="x", pady=5)
         
         ttk.Button(btn_frame, text="닫기", command=popup.destroy).pack(fill="x", pady=5)

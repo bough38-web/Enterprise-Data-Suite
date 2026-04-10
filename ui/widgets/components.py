@@ -122,6 +122,7 @@ class ValueFilterPopup:
         self.top.destroy()
 
 class SheetSelectPopup:
+    def __init__(self, parent, title, sheet_names):
         self.result = None
         self.top = tk.Toplevel(parent)
         self.top.title(title)
@@ -134,7 +135,6 @@ class SheetSelectPopup:
         
         self.top.transient(parent)
         self.top.grab_set()
-        
         
         # Set theme background immediately
         try: self.top.configure(bg=parent.winfo_toplevel().cget('bg'))
