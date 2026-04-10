@@ -52,9 +52,16 @@ class ExcelHandler:
     @staticmethod
     def write_to_active_excel(df, sheet_name_base="Result", bold_header=True):
         try:
-            app = xw.apps.active
+            try:
+                app = xw.apps.active
+            except:
+                app = None
+                
             if not app:
-                app = xw.App(visible=True)
+                try:
+                    app = xw.App(visible=True)
+                except Exception as e:
+                    raise Exception(f"엑셀 앱을 실행할 수 없습니다: {e}")
             
             # Optimization for Active Excel
             app.screen_updating = False
@@ -276,6 +283,8 @@ class ExcelHandler:
             return []
         except:
             return []
+    @staticmethod
+    def peek_google_sheet_headers(url, sheet_name=None):
         """Peek headers from a public Google Sheet."""
         sheet_id, gid = ExcelHandler.parse_google_sheet_url(url)
         if not sheet_id: raise ValueError("유효하지 않은 구글 스프레드시트 주소입니다.")

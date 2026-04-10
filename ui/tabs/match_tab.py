@@ -46,6 +46,9 @@ class MatchTab(ttk.Frame):
         self.load_registered_sources()
         self.load_presets_list()
 
+        # Bind resize for responsive column layout
+        self.scroll_frame.bind("<Configure>", self.on_layout_change)
+
 
     def register_on_load(self, callback):
         """Register a function to be called whenever df_left is updated."""
@@ -250,7 +253,9 @@ class MatchTab(ttk.Frame):
             for idx, col in enumerate(self.cloud_headers):
                 var = tk.BooleanVar(value=True)
                 self.col_vars[col] = var
-                ttk.Checkbutton(self.scroll_frame.scrollable_frame, text=str(col), variable=var).grid(row=idx//6, column=idx%6, sticky="w", padx=15, pady=6)
+                ttk.Checkbutton(self.scroll_frame.scrollable_frame, text=str(col), variable=var, style="Small.TCheckbutton").grid(row=0, column=0)
+            
+            self.regrid_columns()
 
             
             self.filter_combo['values'] = self.cloud_headers
@@ -349,7 +354,39 @@ class MatchTab(ttk.Frame):
         for idx, col in enumerate(cols):
             var = tk.BooleanVar(value=True)
             self.col_vars[col] = var
-            ttk.Checkbutton(self.scroll_frame.scrollable_frame, text=str(col), variable=var).grid(row=idx//6, column=idx%6, sticky="w", padx=15, pady=6)
+            # Use dynamic layout helper
+            self.place_col_checkbox(idx, col, var)
+
+    def on_layout_change(self, event=None):
+        """Respond to window resizing by re-gridding columns."""
+        if not self.col_vars: return
+        self.regrid_columns()
+
+    def regrid_columns(self):
+        """Recalculate and apply grid positions for all column checkboxes."""
+        if not self.col_vars: return
+        
+        parent = self.scroll_frame.scrollable_frame
+        children = parent.winfo_children()
+        if not children: return
+        
+        # Calculate optimal columns based on width
+        width = self.scroll_frame.winfo_width()
+        if width < 100: width = 800 # Fallback for initial render
+        
+        # Heuristic: ~150px per column for 'Small' font checkboxes
+        num_cols = max(1, min(10, width // 140))
+        
+        for idx, child in enumerate(children):
+            if isinstance(child, ttk.Checkbutton):
+                child.grid(row=idx//num_cols, column=idx%num_cols, sticky="w", padx=10, pady=4)
+
+    def place_col_checkbox(self, idx, col, var):
+        """Initial placement helper."""
+        # This will be refined by regrid_columns via <Configure> event
+        ttk.Checkbutton(self.scroll_frame.scrollable_frame, text=str(col), variable=var, style="Small.TCheckbutton").grid(
+            row=idx//6, column=idx%6, sticky="w", padx=10, pady=4
+        )
 
 
     def add_filter_rule(self):
@@ -621,7 +658,9 @@ class MatchTab(ttk.Frame):
             for idx, col in enumerate(self.cloud_headers):
                 var = tk.BooleanVar(value=True)
                 self.col_vars[col] = var
-                ttk.Checkbutton(self.scroll_frame.scrollable_frame, text=str(col), variable=var).grid(row=idx//6, column=idx%6, sticky="w", padx=15, pady=6)
+                ttk.Checkbutton(self.scroll_frame.scrollable_frame, text=str(col), variable=var, style="Small.TCheckbutton").grid(row=0, column=0)
+            
+            self.regrid_columns()
 
             
             self.filter_combo['values'] = self.cloud_headers
@@ -671,8 +710,8 @@ class MatchTab(ttk.Frame):
         self.col_vars[name] = var
         
         # Grid placement logic (match existing grid)
-        ttk.Checkbutton(self.scroll_frame.scrollable_frame, text=str(name), variable=var).grid(
-            row=idx//6, column=idx%6, sticky="w", padx=15, pady=6
+        ttk.Checkbutton(self.scroll_frame.scrollable_frame, text=str(name), variable=var, style="Small.TCheckbutton").grid(
+            row=idx//6, column=idx%6, sticky="w", padx=10, pady=4
         )
         
         # Update filter combo

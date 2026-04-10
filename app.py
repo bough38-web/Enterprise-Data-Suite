@@ -8,16 +8,18 @@ import webbrowser
 from pathlib import Path
 from PIL import Image, ImageTk
 
-# Windows High DPI Awareness
+# Windows High DPI Awareness Optimization
 if sys.platform == "win32":
     try:
         from ctypes import windll
-        # Set DPI awareness to 'System DPI Aware' (1) or 'Per-monitor' (2)
-        # 1 is usually safer for Tkinter layout consistency
-        windll.shcore.SetProcessDpiAwareness(1)
+        # Set DPI awareness to 'Per-Monitor DPI Aware' (2) for maximum sharpness on modern Windows
+        # If 2 is not supported, it falls back to 1 (System DPI Aware)
+        try:
+            windll.shcore.SetProcessDpiAwareness(2)
+        except:
+            windll.shcore.SetProcessDpiAwareness(1)
     except Exception:
         try:
-            # Fallback for older Windows versions
             windll.user32.SetProcessDPIAware()
         except Exception:
             pass
@@ -209,7 +211,17 @@ class EasyMatchPro(tk.Tk):
         sv_ttk.set_theme(base)
         
         style = ttk.Style(self)
-        style.configure("Header.TLabel", font=("System", 18, "bold"))
+        
+        # Define Global Typography
+        main_font = ("Segoe UI", 10) if sys.platform == "win32" else ("Helvetica", 11)
+        header_font = ("Segoe UI", 18, "bold") if sys.platform == "win32" else ("Helvetica", 18, "bold")
+        small_font = ("Segoe UI", 9) if sys.platform == "win32" else ("Helvetica", 10)
+        
+        # Set default font for all ttk widgets
+        style.configure(".", font=main_font)
+        style.configure("Header.TLabel", font=header_font)
+        style.configure("Small.TLabel", font=small_font)
+        style.configure("Small.TCheckbutton", font=small_font)
         
         # Professional Palette Definition
         palettes = {
