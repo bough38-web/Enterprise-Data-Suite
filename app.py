@@ -8,6 +8,14 @@ import webbrowser
 from pathlib import Path
 from PIL import Image, ImageTk
 
+# Windows High DPI Awareness
+if sys.platform == "win32":
+    try:
+        from ctypes import windll
+        windll.shcore.SetProcessDpiAwareness(1)
+    except Exception:
+        pass
+
 # Add local directories to path to ensure imports work correctly
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 sys.path.append(BASE_DIR)
@@ -95,7 +103,7 @@ class EasyMatchPro(tk.Tk):
         self.load_config()
         
         self.title(f"{self.config['branding']['name']} {self.config['branding']['version']}")
-        self.geometry("1450x900")
+        self.optimize_window_geometry()
         
         # Start Theme later
         self.after_idle(lambda: self.apply_theme(self.config['branding'].get('theme', 'dark')))
@@ -129,6 +137,28 @@ class EasyMatchPro(tk.Tk):
                     "registered_sources": {"github_url": "", "github_token": "", "google_sheets_url": "", "google_sheet_names": ""}
                 }
 
+
+    def optimize_window_geometry(self):
+        """Detect screen resolution and set optimal window size and position."""
+        try:
+            sw = self.winfo_screenwidth()
+            sh = self.winfo_screenheight()
+            
+            # Target 85% of screen but with reasonable bounds
+            w = int(sw * 0.85)
+            h = int(sh * 0.85)
+            
+            # Clamp limits (Min 1350x850, Max 1600x1000 for comfort)
+            w = max(1350, min(w, 1600))
+            h = max(850, min(h, 1000))
+            
+            # Center it
+            x = (sw - w) // 2
+            y = (sh - h) // 2
+            
+            self.geometry(f"{w}x{h}+{x}+{y}")
+        except Exception:
+            self.geometry("1450x900")
 
     def apply_theme(self, theme_name):
         self.config['branding']['theme'] = theme_name
