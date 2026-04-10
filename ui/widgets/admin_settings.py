@@ -260,12 +260,12 @@ class AdminSettingsPopup(tk.Toplevel):
             "url": self.tel_url.get().strip()
         }
         
-        # Save Registered Sources
-        self.config['registered_sources']['github_url'] = self.reg_github.get().strip()
-        self.config['registered_sources']['github_token'] = self.reg_token.get().strip()
-        self.config['registered_sources']['google_sheets_url'] = self.reg_google.get().strip()
-        self.config['registered_sources']['remote_presets_url'] = self.reg_presets.get().strip()
-        self.config['registered_sources']['remote_update_url'] = self.reg_update.get().strip()
+        # Save Registered Sources (with automatic whitespace sanitation)
+        self.config['registered_sources']['github_url'] = self.reg_github.get().strip().split('\n')[0].strip()
+        self.config['registered_sources']['github_token'] = self.reg_token.get().strip().split('\n')[0].strip()
+        self.config['registered_sources']['google_sheets_url'] = self.reg_google.get().strip().split('\n')[0].strip()
+        self.config['registered_sources']['remote_presets_url'] = self.reg_presets.get().strip().split('\n')[0].strip()
+        self.config['registered_sources']['remote_update_url'] = self.reg_update.get().strip().split('\n')[0].strip()
         
         # Save Admin Contact
         self.config['admin_contact'] = self.admin_contact.get().strip()

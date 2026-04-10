@@ -30,6 +30,9 @@ class GitHubSync:
 
         if not token:
             return False, "GitHub 토큰이 설정되어 있지 않습니다."
+        
+        # Sanitize token: remove whitespace/newlines and handle potential double pasting
+        token = token.strip().split('\n')[0].strip()
 
         filename = os.path.basename(local_path)
         date_str = datetime.now().strftime("%Y-%m-%d")
