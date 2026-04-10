@@ -60,7 +60,10 @@ class ExcelHandler:
             app.screen_updating = False
             app.display_alerts = False
             
-            wb = app.books.active
+            if not app.books:
+                wb = app.books.add()
+            else:
+                wb = app.books.active
             
             sheet_name = safe_sheet_name(sheet_name_base)
             existing = [s.name for s in wb.sheets]
@@ -175,8 +178,12 @@ class ExcelHandler:
             with requests.get(url, headers=headers, stream=True) as r:
                 r.raise_for_status()
                 # Read just enough to get the first line
-                first_line = next(r.iter_lines()).decode('utf-8-sig')
-                return first_line.split(',')
+                lines = r.iter_lines()
+                try:
+                    first_line = next(lines).decode('utf-8-sig')
+                except StopIteration:
+                    return []
+                return [c.strip('"') for c in first_line.split(',')]
         else:
             # For Excel, we unfortunately have to download more
             # but we'll still try to limit it if possible (Excel is hard to stream)
@@ -236,7 +243,29 @@ class ExcelHandler:
                          quoting=csv.QUOTE_NONE, on_bad_lines='warn')
 
     @staticmethod
-    def peek_google_sheet_headers(url, sheet_name=None):
+    def get_google_sheet_list(url):
+        """Fetch all sheet names from a public Google Spreadsheet URL."""
+        sheet_id, _ = ExcelHandler.parse_google_sheet_url(url)
+        if not sheet_id: return []
+        
+        # Public HTML view contains sheet metadata in standard HTML
+        target_url = f"https://docs.google.com/spreadsheets/d/{sheet_id}/htmlview"
+        try:
+            r = requests.get(target_url, timeout=10)
+            r.raise_for_status()
+            
+            # Pattern for sheet names: {"name":"Sheet1","id":"0"}
+            # We can find them in the JSON-like data in the script tags
+            import json
+            matches = re.findall(r'{"name":"([^"]+)","id":"([^"]+)"', r.text)
+            if matches:
+                return [m[0] for m in matches]
+            
+            # Fallback: simple text search for sheet tabs in HTML
+            # (less reliable but good as backup)
+            return []
+        except:
+            return []
         """Peek headers from a public Google Sheet."""
         sheet_id, gid = ExcelHandler.parse_google_sheet_url(url)
         if not sheet_id: raise ValueError("유효하지 않은 구글 스프레드시트 주소입니다.")
@@ -248,5 +277,9 @@ class ExcelHandler:
             
         with requests.get(export_url, stream=True) as r:
             r.raise_for_status()
-            first_line = next(r.iter_lines()).decode('utf-8')
+            lines = r.iter_lines()
+            try:
+                first_line = next(lines).decode('utf-8')
+            except StopIteration:
+                return [] # Empty sheet
             return [c.strip('"') for c in first_line.split(',')]

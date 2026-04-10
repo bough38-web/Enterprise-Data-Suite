@@ -15,7 +15,9 @@ class DataEngine:
             if col in df1.columns and col in df2.columns:
                 return col
         common = [c for c in df1.columns if c in df2.columns]
-        return common[0] if common else df1.columns[0]
+        if common: return common[0]
+        if not df1.columns.empty: return df1.columns[0]
+        return None
 
     @staticmethod
     def auto_match_columns(df1, df2):

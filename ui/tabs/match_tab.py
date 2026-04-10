@@ -155,6 +155,7 @@ class MatchTab(ttk.Frame):
         
         gs_btns = ttk.Frame(gs_lf)
         gs_btns.pack(fill="x", pady=(8, 0))
+        ttk.Button(gs_btns, text="시트 목록", command=self.fetch_google_sheets).pack(side="left", expand=True, fill="x", padx=2)
         ttk.Button(gs_btns, text="헤더 확인", command=self.peek_google).pack(side="left", expand=True, fill="x", padx=2)
         ttk.Button(gs_btns, text="선택 다운로드", command=self.download_google).pack(side="left", expand=True, fill="x", padx=2)
 
@@ -232,6 +233,7 @@ class MatchTab(ttk.Frame):
         btn_bar.pack(fill="x", pady=5)
         ttk.Button(btn_bar, text="전체 선택", command=self.select_all_cols).pack(side="left", padx=2)
         ttk.Button(btn_bar, text="전체 해제", command=self.unselect_all_cols).pack(side="left", padx=2)
+        ttk.Button(btn_bar, text="+ 수동 컬럼", command=self.add_manual_column, style="Accent.TButton").pack(side="right", padx=2)
 
     def peek_cloud(self):
 
@@ -281,11 +283,14 @@ class MatchTab(ttk.Frame):
 
     def load_active(self):
         try:
-            self.set_info("연결 중...")
-            import xlwings as xw
+            self.set_info("활성 엑셀 연동 중...")
             app = xw.apps.active
             if not app:
-                raise Exception("실행 중인 엑셀이 없습니다.")
+                raise Exception("열려있는 엑셀 앱이 없습니다.")
+                
+            if not app.books:
+                raise Exception("열려있는 엑셀 문서(작업창)가 없습니다.")
+                
             wb = app.books.active
             left_ws, right_ws = ExcelHandler.detect_special_sheets(wb)
 
@@ -371,7 +376,10 @@ class MatchTab(ttk.Frame):
         self.filter_listbox.delete(0, tk.END)
         for f in self.active_filters:
             m = "포함" if f['mode'] == 'include' else "제외"
-            v = f"{f['values'][0]}" if len(f['values']) == 1 else f"{f['values'][0]} 외 {len(f['values'])-1}건"
+            if not f.get('values'):
+                v = "값 없음"
+            else:
+                v = f"{f['values'][0]}" if len(f['values']) == 1 else f"{f['values'][0]} 외 {len(f['values'])-1}건"
             self.filter_listbox.insert(tk.END, f"[{f['column']}] {m}: {v}")
 
     def load_presets_list(self):
@@ -479,13 +487,31 @@ class MatchTab(ttk.Frame):
                 df_res = DataEngine.add_source_info(df_res, self.left_path)
                 
                 if self.direct_save.get():
-                    out_path = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV", "*.csv"), ("Excel", "*.xlsx")])
-                    if not out_path: return
+                    out_path = filedialog.asksaveasfilename(defaultextension=".xlsx", filetypes=[("Excel", "*.xlsx"), ("CSV", "*.csv")])
+                    if not out_path:
+                        self.set_info("저장 취소")
+                        return
                     ExcelHandler.save_to_file(df_res, out_path)
                     res_msg = f"파일 저장 완료: {os.path.basename(out_path)}"
                 else:
-                    sheet_name = ExcelHandler.write_to_active_excel(df_res, "추출결과")
-                    res_msg = f"엑셀 완료 (시트: {sheet_name})"
+                    try:
+                        sheet_name = ExcelHandler.write_to_active_excel(df_res, "추출결과")
+                        res_msg = f"엑셀 완료 (시트: {sheet_name})"
+                    except Exception as export_err:
+                        # Fallback for macOS OSERROR: -1728 or other Automation issues
+                        if messagebox.askyesno("엑셀 연동 실패", 
+                            f"열려있는 엑셀에 데이터를 직접 쓸 수 없습니다.\n오류: {export_err}\n\n결과물을 파일로 대신 저장하시겠습니까?"):
+                            out_path = filedialog.asksaveasfilename(
+                                defaultextension=".xlsx",
+                                filetypes=[("Excel files", "*.xlsx"), ("CSV files", "*.csv")]
+                            )
+                            if out_path:
+                                ExcelHandler.save_to_file(df_res, out_path)
+                                res_msg = f"파일 저장 완료: {os.path.basename(out_path)}"
+                            else:
+                                raise Exception("작업이 취소되었습니다.")
+                        else:
+                            raise export_err
                 
                 self.set_info("완료")
                 messagebox.showinfo("성공", f"{res_msg}\n처리 행: {len(df_res):,}건")
@@ -585,6 +611,8 @@ class MatchTab(ttk.Frame):
         try:
             self.set_info("구글 헤더 확인 중...")
             self.cloud_headers = ExcelHandler.peek_google_sheet_headers(url, target_name)
+            if not self.cloud_headers:
+                raise ValueError("가져올 헤더가 없습니다. 시트 내용을 확인하세요.")
             
             # Show headers
             for w in self.scroll_frame.scrollable_frame.winfo_children(): w.destroy()
@@ -599,6 +627,56 @@ class MatchTab(ttk.Frame):
             self.set_info("구글 헤더 로드 완료")
         except Exception as e:
             messagebox.showerror("구글 오류", f"데이터를 읽을 수 없습니다. (공개 여부 확인 필요)\n{e}")
+
+    def fetch_google_sheets(self):
+        url = self.gs_url.get().strip()
+        if not url:
+            messagebox.showwarning("입력 필요", "스프레드시트 주소를 먼저 입력하세요.")
+            return
+            
+        try:
+            self.set_info("시트 목록 가져오는 중...")
+            sheet_names = ExcelHandler.get_google_sheet_list(url)
+            if not sheet_names:
+                raise ValueError("시트 목록을 가져올 수 없습니다. 주소나 공개 여부를 확인하세요.")
+                
+            popup = SheetSelectPopup(self.winfo_toplevel(), "시트 선택", sheet_names)
+            if popup.result:
+                current = self.gs_sheet_names.get().strip()
+                if current:
+                    if popup.result not in [n.strip() for n in current.split(',')]:
+                        self.gs_sheet_names.set(f"{current}, {popup.result}")
+                else:
+                    self.gs_sheet_names.set(popup.result)
+                self.set_info(f"시트 추가됨: {popup.result}")
+            else:
+                self.set_info("선택 취소")
+        except Exception as e:
+            messagebox.showerror("구글 오류", str(e))
+            self.set_info("실패")
+
+    def add_manual_column(self):
+        name = simpledialog.askstring("수동 컬럼 추가", "추가할 컬럼명을 입력하세요:")
+        if not name: return
+        
+        name = name.strip()
+        if name in self.col_vars:
+            messagebox.showwarning("중복", "이미 존재하는 컬럼명입니다.")
+            return
+            
+        # Add to UI
+        idx = len(self.col_vars)
+        var = tk.BooleanVar(value=True)
+        self.col_vars[name] = var
+        
+        # Grid placement logic (match existing grid)
+        ttk.Checkbutton(self.scroll_frame.scrollable_frame, text=str(name), variable=var).grid(
+            row=idx//6, column=idx%6, sticky="w", padx=15, pady=6
+        )
+        
+        # Update filter combo
+        self.filter_combo['values'] = list(self.col_vars.keys())
+        self.set_info(f"수동 컬럼 추가: {name}")
 
     def download_google(self):
         url = self.gs_url.get().strip()
@@ -618,6 +696,9 @@ class MatchTab(ttk.Frame):
                         dfs.append(ExcelHandler.read_google_sheet(url, sheet_name=name, usecols=selected_cols))
                 
                 # Combine multiple sheets if provided
+                if not dfs:
+                    raise ValueError("로딩된 데이터가 없습니다.")
+                    
                 if len(dfs) > 1:
                     self.df_left = pd.concat(dfs, ignore_index=True)
                 else:
