@@ -64,3 +64,52 @@ class GitHubSync:
                 
         except Exception as e:
             return False, f"업로드 중 오류 발생: {str(e)}"
+
+    @staticmethod
+    def list_files(token, repo_url):
+        """
+        Lists all files in the GitHub repository recursively,
+        filtering for files in the 'uploads/' directory.
+        """
+        owner, repo = GitHubSync.extract_repo_info(repo_url)
+        if not owner or not repo:
+            return False, "유효한 GitHub URL을 찾을 수 없습니다."
+
+        if token:
+            token = token.strip().split('\n')[0].strip()
+
+        try:
+            # Use the Git Trees API for recursive listing
+            api_url = f"https://api.github.com/repos/{owner}/{repo}/git/trees/main?recursive=1"
+            headers = {
+                "Accept": "application/vnd.github.v3+json"
+            }
+            if token:
+                headers["Authorization"] = f"token {token}"
+            
+            response = requests.get(api_url, headers=headers, timeout=20)
+            if response.status_code != 200:
+                msg = response.json().get("message", "Unknown error")
+                return False, f"목록 조회 실패 (HTTP {response.status_code}): {msg}"
+            
+            tree_data = response.json().get("tree", [])
+            files = []
+            for item in tree_data:
+                # Filter for files in 'uploads/' directory
+                if item['type'] == 'blob' and item['path'].startswith('uploads/'):
+                    path = item['path']
+                    # Standard raw URL format
+                    raw_url = f"https://raw.githubusercontent.com/{owner}/{repo}/main/{path}"
+                    
+                    files.append({
+                        "path": path,
+                        "raw_url": raw_url,
+                        "size": item.get('size', 0)
+                    })
+            
+            # Sort by path (which includes date, so it's roughly chronological)
+            files.sort(key=lambda x: x['path'], reverse=True)
+            return True, files
+            
+        except Exception as e:
+            return False, f"목록 조회 중 오류 발생: {str(e)}"

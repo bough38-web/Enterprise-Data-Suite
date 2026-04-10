@@ -114,6 +114,7 @@ class MatchTab(ttk.Frame):
         
         btn_grp_c = ttk.Frame(cloud_title_frame)
         btn_grp_c.pack(side="right")
+        ttk.Button(btn_grp_c, text="📂 탐색", width=6, command=self.open_cloud_explorer).pack(side="left", padx=2)
         ttk.Button(btn_grp_c, text="수정", width=5, command=lambda: self.unlock_source_config('github')).pack(side="left", padx=2)
         ttk.Button(btn_grp_c, text="저장", width=5, command=lambda: self.save_source_config('github')).pack(side="left", padx=2)
         
@@ -248,6 +249,24 @@ class MatchTab(ttk.Frame):
         ttk.Button(btn_bar, text="전체 선택", command=self.select_all_cols).pack(side="left", padx=2)
         ttk.Button(btn_bar, text="전체 해제", command=self.unselect_all_cols).pack(side="left", padx=2)
         ttk.Button(btn_bar, text="+ 수동 컬럼", command=self.add_manual_column, style="Accent.TButton").pack(side="right", padx=2)
+
+    def open_cloud_explorer(self):
+        """Open a popup to browse files in the GitHub uploads/ directory."""
+        master = self.winfo_toplevel()
+        url = master.config['registered_sources'].get('github_url', '')
+        token = master.config['registered_sources'].get('github_token', '')
+        
+        if not url:
+            from tkinter import messagebox
+            messagebox.showwarning("설정 필요", "관리자 설정에서 GitHub 저장소 URL을 먼저 등록해 주세요.")
+            return
+
+        from ui.widgets.components import CloudExplorerPopup
+        explorer = CloudExplorerPopup(self, token, url)
+        
+        if explorer.result:
+            self.cloud_url.set(explorer.result)
+            self.peek_cloud()
 
     def peek_cloud(self):
 

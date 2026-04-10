@@ -210,3 +210,91 @@ def create_help_btn(parent, title, content):
                     font=("System", 9, "bold"), cursor="hand2", padding=(4, 0))
     btn.bind("<Button-1>", lambda e: HelpPopup(parent.winfo_toplevel(), title, content))
     return btn
+
+class CloudExplorerPopup:
+    def __init__(self, parent, token, repo_url):
+        self.result = None
+        self.token = token
+        self.repo_url = repo_url
+        
+        self.top = tk.Toplevel(parent)
+        self.top.title("GitHub 구름 탐색기")
+        
+        scaling = parent.tk.call('tk', 'scaling')
+        w = int(500 * (scaling / 1.33))
+        h = int(600 * (scaling / 1.33))
+        self.top.geometry(f"{w}x{h}")
+        
+        self.top.transient(parent)
+        self.top.grab_set()
+        
+        try: self.top.configure(bg=parent.winfo_toplevel().cget('bg'))
+        except: pass
+
+        main = ttk.Frame(self.top, padding=20)
+        main.pack(fill="both", expand=True)
+
+        header = ttk.Frame(main)
+        header.pack(fill="x", pady=(0, 15))
+        ttk.Label(header, text="☁️ 업로드된 파일 모아보기", font=("System", 12, "bold")).pack(side="left")
+        ttk.Button(header, text="새로고침", command=self.load_data, width=10).pack(side="right")
+
+        # Treeview
+        tree_frame = ttk.Frame(main)
+        tree_frame.pack(fill="both", expand=True)
+        
+        self.tree = ttk.Treeview(tree_frame, columns=("size"), show="tree")
+        self.tree.pack(side="left", fill="both", expand=True)
+        
+        vsb = ttk.Scrollbar(tree_frame, orient="vertical", command=self.tree.yview)
+        vsb.pack(side="right", fill="y")
+        self.tree.configure(yscrollcommand=vsb.set)
+        
+        self.tree.bind("<Double-1>", lambda e: self.apply())
+
+        btn_frame = ttk.Frame(main)
+        btn_frame.pack(fill="x", pady=(20, 0))
+        
+        ttk.Button(btn_frame, text="취소", command=self.top.destroy, width=12).pack(side="right", padx=5)
+        ttk.Button(btn_frame, text="파일 로드 (Load)", command=self.apply, style="Accent.TButton", width=15).pack(side="right", padx=5)
+
+        self.load_data()
+        self.top.wait_window()
+
+    def load_data(self):
+        # Clear tree
+        for i in self.tree.get_children():
+            self.tree.delete(i)
+            
+        from utils.github_sync import GitHubSync
+        success, data = GitHubSync.list_files(self.token, self.repo_url)
+        
+        if not success:
+            from tkinter import messagebox
+            messagebox.showerror("오류", f"파일 목록을 가져오지 못했습니다:\n{data}")
+            return
+            
+        # Parse flat paths into a hierarchy
+        # uploads/YYYY-MM-DD/filename.xlsx
+        folders = {}
+        for item in data:
+            parts = item['path'].split('/')
+            if len(parts) >= 2:
+                folder_name = parts[1] # YYYY-MM-DD
+                file_name = parts[-1]
+                
+                if folder_name not in folders:
+                    folders[folder_name] = self.tree.insert("", "end", text=f"📂 {folder_name}", open=True)
+                
+                self.tree.insert(folders[folder_name], "end", text=f"📄 {file_name}", values=(item['raw_url'],))
+
+    def apply(self):
+        selected = self.tree.selection()
+        if not selected:
+            return
+            
+        item = self.tree.item(selected[0])
+        # If it's a file (has raw_url in values)
+        if item['values']:
+            self.result = item['values'][0]
+            self.top.destroy()
