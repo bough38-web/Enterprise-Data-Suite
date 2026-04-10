@@ -149,8 +149,25 @@ class EasyMatchPro(tk.Tk):
         # Force redraw to ensure theme engine is ready
         self.update_idletasks()
         
+        # macOS Clipboard/Selection Shortcuts Fix
+        if sys.platform == "darwin":
+            self.bind_all("<Command-v>", lambda e: e.widget.event_generate("<<Paste>>"))
+            self.bind_all("<Command-c>", lambda e: e.widget.event_generate("<<Copy>>"))
+            self.bind_all("<Command-x>", lambda e: e.widget.event_generate("<<Cut>>"))
+            self.bind_all("<Command-a>", lambda e: self._macos_select_all(e))
+
         # Start Splash
         SafeSplash(self.launch_main)
+
+    def _macos_select_all(self, event):
+        """Helper to handle Command-A for entries and text widgets on macOS."""
+        widget = event.widget
+        if isinstance(widget, (ttk.Entry, tk.Entry)):
+            widget.selection_range(0, 'end')
+            widget.icursor('end')
+        elif isinstance(widget, tk.Text):
+            widget.tag_add("sel", "1.0", "end")
+        return "break"
 
     def load_config(self):
         if not self.config_path.exists():
