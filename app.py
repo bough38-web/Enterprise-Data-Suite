@@ -4,6 +4,7 @@ import sys
 import os
 import json
 import sv_ttk
+import webbrowser
 from pathlib import Path
 from PIL import Image, ImageTk
 
@@ -108,7 +109,8 @@ class EasyMatchPro(tk.Tk):
                 "locked_features": {"batch_tab": False, "cleaner_tab": False, "cloud_source": False, "google_sheets": False},
                 "branding": {"name": "EasyMatch", "version": "v3.9 Pro Official", "theme": "dark"},
                 "telemetry": {"enabled": False, "url": ""},
-                "registered_sources": {"github_url": "", "github_token": "", "google_sheets_url": "", "google_sheet_names": ""}
+                "registered_sources": {"github_url": "", "github_token": "", "google_sheets_url": "", "google_sheet_names": ""},
+                "admin_contact": "bough38@gmail.com"
             }
         else:
             try:
@@ -117,6 +119,8 @@ class EasyMatchPro(tk.Tk):
                     # Migrating old configs
                     if 'registered_sources' not in self.config:
                         self.config['registered_sources'] = {"github_url": "", "github_token": "", "google_sheets_url": "", "google_sheet_names": ""}
+                    if 'admin_contact' not in self.config:
+                        self.config['admin_contact'] = "bough38@gmail.com"
             except:
                 self.config = {
                     "locked_features": {"batch_tab": False, "cleaner_tab": False, "cloud_source": False, "google_sheets": False},
@@ -197,7 +201,8 @@ class EasyMatchPro(tk.Tk):
         
         ttk.Label(main, text="기기 인증 및 라이센스 등록", font=("System", 14, "bold")).pack(pady=(0, 20))
         
-        ttk.Label(main, text="아래 '기기 고유 ID'를 복사하여 관리자에게 전달하세요.", font=("System", 9)).pack(anchor="w")
+        admin_email = self.config.get('admin_contact', 'bough38@gmail.com')
+        ttk.Label(main, text=f"아래 ID를 복사하여 관리자({admin_email})에게 라이센스를 요청하세요.", font=("System", 9), foreground="#007ACC").pack(anchor="w")
         
         id_frame = ttk.Frame(main)
         id_frame.pack(fill="x", pady=10)
@@ -212,6 +217,16 @@ class EasyMatchPro(tk.Tk):
             messagebox.showinfo("복사 완료", "기기 ID가 클립보드에 복사되었습니다.")
         
         ttk.Button(id_frame, text="복사", width=5, command=copy_id).pack(side="right", padx=5)
+
+        def open_mail():
+            subject = "EasyMatch 라이센스 요청"
+            body = f"안녕하세요, 관리자님.\n\nEasyMatch 라이센스 발급을 요청합니다.\n\n[기기 고유 ID]\n{mid}\n\n감사합니다."
+            import urllib.parse
+            encoded_body = urllib.parse.quote(body)
+            encoded_subject = urllib.parse.quote(subject)
+            webbrowser.open(f"mailto:{admin_email}?subject={encoded_subject}&body={encoded_body}")
+
+        ttk.Button(main, text="관리자에게 메일 보내기 (자동 ID 포함)", command=open_mail).pack(fill="x", pady=(0, 10))
 
         ttk.Separator(main, orient="horizontal").pack(fill="x", pady=15)
         

@@ -10,8 +10,15 @@ class AdminSettingsPopup(tk.Toplevel):
         super().__init__(parent)
         self.title("Administrator Settings")
         self.geometry("450x700")
-        self.config_path = Path("config.json")
+        
+        # Inherit stable config path from parent app
+        if hasattr(parent, 'config_path'):
+            self.config_path = parent.config_path
+        else:
+            self.config_path = Path("config.json")
+            
         self.grab_set() # Modal
+
         
         self.authenticated = False
         self.build_auth_ui()
@@ -151,6 +158,11 @@ class AdminSettingsPopup(tk.Toplevel):
         ttk.Label(reg_frame, text="기본 구글 시트 URL:", font=("System", 9)).pack(anchor="w", pady=(5, 0))
         self.reg_google = tk.StringVar(value=reg.get('google_sheets_url', ''))
         ttk.Entry(reg_frame, textvariable=self.reg_google).pack(fill="x", pady=2)
+        
+        ttk.Label(main, text="기타 관리 설정", font=("System", 11, "bold")).pack(pady=(20, 10))
+        ttk.Label(main, text="관리자 연락처(이메일):", font=("System", 9)).pack(anchor="w")
+        self.admin_contact = tk.StringVar(value=self.config.get('admin_contact', 'bough38@gmail.com'))
+        ttk.Entry(main, textvariable=self.admin_contact).pack(fill="x", pady=2)
 
         ttk.Button(btn_frame, text="저장 및 닫기", command=self.save_and_close).pack(fill="x")
 
@@ -167,6 +179,9 @@ class AdminSettingsPopup(tk.Toplevel):
         # Save Registered Sources
         self.config['registered_sources']['github_url'] = self.reg_github.get().strip()
         self.config['registered_sources']['google_sheets_url'] = self.reg_google.get().strip()
+        
+        # Save Admin Contact
+        self.config['admin_contact'] = self.admin_contact.get().strip()
             
         with open(self.config_path, 'w', encoding='utf-8') as f:
             json.dump(self.config, f, indent=4, ensure_ascii=False)
