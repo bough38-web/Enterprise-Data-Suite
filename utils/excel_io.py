@@ -1,5 +1,6 @@
 import pandas as pd
 import xlwings as xw
+import csv
 from pathlib import Path
 import re
 import requests
@@ -24,9 +25,12 @@ class ExcelHandler:
         ext = Path(path).suffix.lower()
         if ext == ".csv":
             try:
-                return pd.read_csv(path, dtype=object, encoding="utf-8-sig", low_memory=False)
+                # Use QUOTE_NONE to avoid 'EOF inside string' errors in malformed CSVs
+                return pd.read_csv(path, dtype=object, encoding="utf-8-sig", low_memory=False, 
+                                 quoting=csv.QUOTE_NONE, on_bad_lines='warn')
             except UnicodeDecodeError:
-                return pd.read_csv(path, dtype=object, encoding="cp949", low_memory=False)
+                return pd.read_csv(path, dtype=object, encoding="cp949", low_memory=False, 
+                                 quoting=csv.QUOTE_NONE, on_bad_lines='warn')
         
         if ext in [".xlsx", ".xlsm", ".xls"]:
             # If sheet_name is None, pd.read_excel returns a dict. 
@@ -172,7 +176,8 @@ class ExcelHandler:
         
         content = io.BytesIO(r.content)
         if url.lower().endswith('.csv'):
-            return pd.read_csv(content, usecols=usecols, low_memory=False, encoding='utf-8-sig')
+            return pd.read_csv(content, usecols=usecols, low_memory=False, encoding='utf-8-sig',
+                             quoting=csv.QUOTE_NONE, on_bad_lines='warn')
         else:
             return pd.read_excel(content, usecols=usecols)
 
@@ -206,7 +211,8 @@ class ExcelHandler:
         r = requests.get(export_url)
         r.raise_for_status()
         
-        return pd.read_csv(io.StringIO(r.text), usecols=usecols, low_memory=False)
+        return pd.read_csv(io.StringIO(r.text), usecols=usecols, low_memory=False,
+                         quoting=csv.QUOTE_NONE, on_bad_lines='warn')
 
     @staticmethod
     def peek_google_sheet_headers(url, sheet_name=None):
