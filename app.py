@@ -323,14 +323,18 @@ class EasyMatchPro(tk.Tk):
         header_container = ttk.Frame(self, padding=(20, 10))
         header_container.pack(fill="x")
         
+        # Spacer for centering
+        spacer_l = ttk.Frame(header_container)
+        spacer_l.pack(side="left", expand=True)
+        
         header = ttk.Frame(header_container)
         header.pack(side="left")
         ttk.Label(header, text="이지매치", style="Header.TLabel").pack(side="left")
         ttk.Label(header, text="EasyMatch Pro", foreground="#00E5FF", font=("System", 11, "bold")).pack(side="left", padx=10, pady=(5,0))
         
-        # Settings & Theme Buttons
+        # Right aligned buttons
         btn_frame = ttk.Frame(header_container)
-        btn_frame.pack(side="right")
+        btn_frame.pack(side="left", expand=True, anchor="e")
         
         # Theme Dropdown
         theme_menu = tk.Menubutton(btn_frame, text="THEME ▼", relief="flat", font=("System", 9), direction="below")
@@ -341,7 +345,7 @@ class EasyMatchPro(tk.Tk):
             theme_menu.menu.add_command(label=t, command=lambda x=t.lower(): self.apply_theme(x))
         
         theme_menu.pack(side="left", padx=5)
-        ttk.Button(btn_frame, text="ADMIN", width=7, command=self.open_admin_settings).pack(side="right", padx=5)
+        ttk.Button(btn_frame, text="ADMIN", width=7, command=self.open_admin_settings).pack(side="left", padx=5)
 
 
         # Main Notebook
@@ -349,7 +353,7 @@ class EasyMatchPro(tk.Tk):
         self.notebook.pack(fill="both", expand=True, padx=15, pady=10)
 
         # Tabs (Passing config for registered sources)
-        self.tab_match = MatchTab(self.notebook, self.config)
+        self.tab_match = MatchTab(self.notebook, self.config, self.config_path)
         self.notebook.add(self.tab_match, text="  스마트 매칭  ")
 
 

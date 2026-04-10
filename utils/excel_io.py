@@ -84,8 +84,15 @@ class ExcelHandler:
             finally:
                 app.calculation = initial_calc
             
-            # Formatting
+            # Formatting: Autofit and Center Alignment
             ws.used_range.columns.autofit()
+            try:
+                # xlCenter = -4108
+                ws.used_range.api.HorizontalAlignment = -4108
+                ws.used_range.api.VerticalAlignment = -4108
+            except:
+                pass
+
             if bold_header:
                 header_range = ws.range("1:1") # Use row indexing for header
                 header_range.api.Font.Bold = True
@@ -103,7 +110,6 @@ class ExcelHandler:
                     app.display_alerts = True
             except: pass
             raise Exception(f"Excel Export Error: {e}")
-
     @staticmethod
     def save_to_file(df, path):
         """Direct file saving (CSV or XLSX) - much faster for 900k+ rows."""
@@ -111,8 +117,23 @@ class ExcelHandler:
         if ext == ".csv":
             df.to_csv(path, index=False, encoding="utf-8-sig")
         else:
-            # Use XlsxWriter engine if possible for speed
-            df.to_excel(path, index=False, engine="xlsxwriter")
+            # Use XlsxWriter to apply center alignment even in direct save
+            writer = pd.ExcelWriter(path, engine='xlsxwriter')
+            df.to_excel(writer, index=False, sheet_name='Result')
+            
+            workbook = writer.book
+            worksheet = writer.sheets['Result']
+            
+            # Define center format
+            center_fmt = workbook.add_format({'align': 'center', 'valign': 'vcenter'})
+            
+            # Apply to all columns and set width
+            for i, col in enumerate(df.columns):
+                # Simple width heuristic
+                width = max(len(str(col)), 12) + 2
+                worksheet.set_column(i, i, width, center_fmt)
+            
+            writer.close()
         return path
 
     @staticmethod

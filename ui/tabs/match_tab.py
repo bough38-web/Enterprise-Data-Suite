@@ -13,10 +13,11 @@ from utils.telemetry import TelemetryManager
 from ui.widgets.components import ScrollableFrame, ValueFilterPopup, SheetSelectPopup, create_help_btn
 
 class MatchTab(ttk.Frame):
-    def __init__(self, parent, config=None):
+    def __init__(self, parent, config=None, config_path=None):
         super().__init__(parent)
         self.parent = parent
         self.config = config or {}
+        self.config_path = config_path
 
         self.df_left = None
         self.df_right = None
@@ -54,18 +55,29 @@ class MatchTab(ttk.Frame):
         ctrl_frame = ttk.Frame(self, padding=0)
         ctrl_frame.pack(side="left", fill="y")
 
-        # Use ScrollableFrame for the left sidebar to handle small screens
-        self.sidebar = ScrollableFrame(ctrl_frame)
+        # 1. NEW: Sticky Top Frame for fixed 'Run' button
+        sticky_top = ttk.Frame(ctrl_frame, padding=(15, 10, 15, 0))
+        sticky_top.pack(fill="x")
+        
+        self.run_btn = ttk.Button(sticky_top, text="추출 및 저장 실행", command=self.run_process, style="Accent.TButton")
+        self.run_btn.pack(fill="x")
+        
+        ttk.Separator(ctrl_frame, orient="horizontal").pack(fill="x", pady=(10, 0))
+
+        # 2. Scrollable Settings Area
+        # horizontal=True for horizontal scrolling at the bottom
+        self.sidebar = ScrollableFrame(ctrl_frame, horizontal=True)
         self.sidebar.pack(fill="both", expand=True)
-        self.sidebar.canvas.config(width=340) # Fixed width for consistency
+        self.sidebar.canvas.config(width=380) # Increased width for comfort
         
         # All widgets now go to self.sidebar.scrollable_frame
         sf = self.sidebar.scrollable_frame
-        p_frame = ttk.Frame(sf, padding=15)
+        # Increased padding to look more balanced
+        p_frame = ttk.Frame(sf, padding=(15, 5, 15, 15))
         p_frame.pack(fill="both", expand=True)
 
-        # 1. Data Source
-        load_lf = ttk.LabelFrame(p_frame, text="데이터 소스", padding=10)
+        # 2. Data Source
+        load_lf = ttk.LabelFrame(p_frame, text="데이터 소스", padding=10, labelanchor="n")
         load_lf.pack(fill="x", pady=(0, 10))
         create_help_btn(load_lf, "데이터 소스 가이드", 
             "- 활성 엑셀: 현재 열려있는 엑셀 창에서 데이터를 가져옵니다.\n"
@@ -77,16 +89,20 @@ class MatchTab(ttk.Frame):
         ttk.Button(load_lf, text="참조 파일 열기", command=lambda: self.load_file('right')).pack(fill="x", pady=2)
         
         self.info_var = tk.StringVar(value="대기 중...")
-        ttk.Label(load_lf, textvariable=self.info_var, foreground="#4A90E2").pack(pady=5)
+        ttk.Label(load_lf, textvariable=self.info_var, foreground="#4A90E2").pack(pady=5, anchor="center")
 
-        # 2. Cloud Source (GitHub Raw)
-        cloud_lf = ttk.LabelFrame(p_frame, text="클라우드 소스 (GitHub Raw)", padding=10)
-        cloud_lf.pack(fill="x", pady=(0, 10))
+        # 3. Cloud Source (GitHub Raw)
+        cloud_lf = ttk.LabelFrame(p_frame, text="클라우드 소스 (GitHub Raw)", padding=12, labelanchor="n")
+        cloud_lf.pack(fill="x", pady=(0, 15))
         
         cloud_title_frame = ttk.Frame(cloud_lf)
-        cloud_title_frame.pack(fill="x")
-        ttk.Label(cloud_title_frame, text="GitHub URL:").pack(side="left")
-        ttk.Button(cloud_title_frame, text="저장", width=5, command=lambda: self.save_source_config('github')).pack(side="right")
+        cloud_title_frame.pack(fill="x", pady=(0, 5))
+        ttk.Label(cloud_title_frame, text="GitHub 연동 설정", font=("System", 9, "bold")).pack(side="left")
+        
+        btn_grp_c = ttk.Frame(cloud_title_frame)
+        btn_grp_c.pack(side="right")
+        ttk.Button(btn_grp_c, text="수정", width=5, command=lambda: self.unlock_source_config('github')).pack(side="left", padx=2)
+        ttk.Button(btn_grp_c, text="저장", width=5, command=lambda: self.save_source_config('github')).pack(side="left", padx=2)
         
         create_help_btn(cloud_lf, "클라우드 가이드", 
             "- GitHub Raw URL을 입력하세요.\n"
@@ -96,25 +112,31 @@ class MatchTab(ttk.Frame):
         self.cloud_url = tk.StringVar()
         self.cloud_token = tk.StringVar()
         
-        ttk.Label(cloud_lf, text="URL:").pack(anchor="w")
-        ttk.Entry(cloud_lf, textvariable=self.cloud_url).pack(fill="x", pady=2)
+        ttk.Label(cloud_lf, text="Raw URL:").pack(anchor="center")
+        self.ent_c_url = ttk.Entry(cloud_lf, textvariable=self.cloud_url, justify="center")
+        self.ent_c_url.pack(fill="x", pady=2)
         
-        ttk.Label(cloud_lf, text="Token:").pack(anchor="w")
-        ttk.Entry(cloud_lf, textvariable=self.cloud_token, show="*").pack(fill="x", pady=2)
+        ttk.Label(cloud_lf, text="Personal Access Token:").pack(anchor="center")
+        self.ent_c_token = ttk.Entry(cloud_lf, textvariable=self.cloud_token, show="*", justify="center")
+        self.ent_c_token.pack(fill="x", pady=2)
         
         c_btns = ttk.Frame(cloud_lf)
-        c_btns.pack(fill="x", pady=5)
+        c_btns.pack(fill="x", pady=(8, 0))
         ttk.Button(c_btns, text="헤더 확인", command=self.peek_cloud).pack(side="left", expand=True, fill="x", padx=2)
         ttk.Button(c_btns, text="선택 다운로드", command=self.download_cloud).pack(side="left", expand=True, fill="x", padx=2)
 
-        # 3. Google Sheets Source
-        gs_lf = ttk.LabelFrame(p_frame, text="구글 스프레드시트 연동", padding=10)
-        gs_lf.pack(fill="x", pady=(0, 10))
+        # 4. Google Sheets Source
+        gs_lf = ttk.LabelFrame(p_frame, text="구글 스프레드시트 연동", padding=12, labelanchor="n")
+        gs_lf.pack(fill="x", pady=(0, 15))
         
         gs_title_frame = ttk.Frame(gs_lf)
-        gs_title_frame.pack(fill="x")
-        ttk.Label(gs_title_frame, text="시트 주소:").pack(side="left")
-        ttk.Button(gs_title_frame, text="저장", width=5, command=lambda: self.save_source_config('google')).pack(side="right")
+        gs_title_frame.pack(fill="x", pady=(0, 5))
+        ttk.Label(gs_title_frame, text="Google Sheets 설정", font=("System", 9, "bold")).pack(side="left")
+        
+        btn_grp_g = ttk.Frame(gs_title_frame)
+        btn_grp_g.pack(side="right")
+        ttk.Button(btn_grp_g, text="수정", width=5, command=lambda: self.unlock_source_config('google')).pack(side="left", padx=2)
+        ttk.Button(btn_grp_g, text="저장", width=5, command=lambda: self.save_source_config('google')).pack(side="left", padx=2)
         
         create_help_btn(gs_lf, "구글 시트 가이드", 
             "- 시트 주소를 입력하세요.\n"
@@ -123,28 +145,33 @@ class MatchTab(ttk.Frame):
         self.gs_url = tk.StringVar()
         self.gs_sheet_names = tk.StringVar()
         
-        ttk.Label(gs_lf, text="시트 주소:").pack(anchor="w")
-        ttk.Entry(gs_lf, textvariable=self.gs_url).pack(fill="x", pady=2)
+        ttk.Label(gs_lf, text="스프레드시트 주소(URL):").pack(anchor="center")
+        self.ent_g_url = ttk.Entry(gs_lf, textvariable=self.gs_url, justify="center")
+        self.ent_g_url.pack(fill="x", pady=2)
         
-        ttk.Label(gs_lf, text="탭 이름 (쉼표 구분):").pack(anchor="w")
-        # Fixed the truncated line from previous edit
-        ttk.Entry(gs_lf, textvariable=self.gs_sheet_names).pack(fill="x", pady=2)
+        ttk.Label(gs_lf, text="대상 시트(탭) 목록:").pack(anchor="center")
+        self.ent_g_names = ttk.Entry(gs_lf, textvariable=self.gs_sheet_names, justify="center")
+        self.ent_g_names.pack(fill="x", pady=2)
         
         gs_btns = ttk.Frame(gs_lf)
-        gs_btns.pack(fill="x", pady=5)
+        gs_btns.pack(fill="x", pady=(8, 0))
         ttk.Button(gs_btns, text="헤더 확인", command=self.peek_google).pack(side="left", expand=True, fill="x", padx=2)
         ttk.Button(gs_btns, text="선택 다운로드", command=self.download_google).pack(side="left", expand=True, fill="x", padx=2)
 
-        # 4. Options
-        opt_lf = ttk.LabelFrame(p_frame, text="추출 옵션", padding=10)
+        # 5. Options
+        opt_lf = ttk.LabelFrame(p_frame, text="추출 옵션", padding=10, labelanchor="n")
         opt_lf.pack(fill="x", pady=(0, 10))
         
+        opt_top = ttk.Frame(opt_lf)
+        opt_top.pack(fill="x", pady=2)
         self.mode_var = tk.StringVar(value="keep")
-        ttk.Radiobutton(opt_lf, text="유지", variable=self.mode_var, value="keep").pack(side="left", padx=5)
-        ttk.Radiobutton(opt_lf, text="삭제", variable=self.mode_var, value="delete").pack(side="left", padx=5)
+        ttk.Radiobutton(opt_top, text="유지", variable=self.mode_var, value="keep").pack(side="left", expand=True)
+        ttk.Radiobutton(opt_top, text="삭제", variable=self.mode_var, value="delete").pack(side="left", expand=True)
         
+        opt_mid = ttk.Frame(opt_lf)
+        opt_mid.pack(fill="x", pady=2)
         self.auto_target = tk.BooleanVar(value=True)
-        ttk.Checkbutton(opt_lf, text="대상 필터", variable=self.auto_target).pack(side="left", padx=5)
+        ttk.Checkbutton(opt_mid, text="대상 필터", variable=self.auto_target).pack(side="left", expand=True)
 
         self.fuzzy_match = tk.BooleanVar(value=False)
         ttk.Checkbutton(opt_lf, text="유사도", variable=self.fuzzy_match).pack(side="left", padx=5)
@@ -152,19 +179,19 @@ class MatchTab(ttk.Frame):
         self.direct_save = tk.BooleanVar(value=False)
         ttk.Checkbutton(opt_lf, text="직접 파일 저장", variable=self.direct_save).pack(fill="x", pady=5)
 
-        # 5. Multi Filter
-        filter_lf = ttk.LabelFrame(p_frame, text="필터링 조건 설정", padding=10)
-        filter_lf.pack(fill="x", pady=(0, 10))
+        # 6. Filters
+        filter_lf = ttk.LabelFrame(p_frame, text="조건 필터 관리", padding=10, labelanchor="n")
+        filter_lf.pack(fill="x", pady=(0, 10), expand=True)
         
         f_top = ttk.Frame(filter_lf)
         f_top.pack(fill="x")
         self.filter_col_var = tk.StringVar()
-        self.filter_combo = ttk.Combobox(f_top, textvariable=self.filter_col_var, state="readonly", width=12)
-        self.filter_combo.pack(side="left", padx=2)
+        self.filter_combo = ttk.Combobox(f_top, textvariable=self.filter_col_var, state="readonly", width=12, justify="center")
+        self.filter_combo.pack(side="left", padx=2, expand=True)
         
         self.filter_mode = tk.StringVar(value="include")
-        ttk.Radiobutton(f_top, text="In", variable=self.filter_mode, value="include").pack(side="left")
-        ttk.Radiobutton(f_top, text="Ex", variable=self.filter_mode, value="exclude").pack(side="left")
+        ttk.Radiobutton(f_top, text="In", variable=self.filter_mode, value="include").pack(side="left", expand=True)
+        ttk.Radiobutton(f_top, text="Ex", variable=self.filter_mode, value="exclude").pack(side="left", expand=True)
         
         ttk.Button(f_top, text="추가", command=self.add_filter_rule).pack(side="right", padx=2)
         
@@ -176,14 +203,14 @@ class MatchTab(ttk.Frame):
         ttk.Button(f_btns, text="삭제", command=self.remove_filter_rule).pack(side="left", padx=2)
         ttk.Button(f_btns, text="초기화", command=self.clear_all_filters).pack(side="left", padx=2)
 
-        # 6. Presets
-        pre_lf = ttk.LabelFrame(p_frame, text="추출 프리셋", padding=10)
+        # 7. Presets
+        pre_lf = ttk.LabelFrame(p_frame, text="추출 프리셋", padding=10, labelanchor="n")
         pre_lf.pack(fill="x", pady=(0, 10))
         
         pre_top = ttk.Frame(pre_lf)
         pre_top.pack(fill="x")
         self.preset_var = tk.StringVar()
-        self.preset_combo = ttk.Combobox(pre_top, textvariable=self.preset_var, state="readonly")
+        self.preset_combo = ttk.Combobox(pre_top, textvariable=self.preset_var, state="readonly", justify="center")
         self.preset_combo.pack(side="left", expand=True, fill="x", padx=(0, 5))
         self.preset_combo.bind("<<ComboboxSelected>>", self.apply_preset)
         
@@ -194,15 +221,11 @@ class MatchTab(ttk.Frame):
         ttk.Button(pre_btns, text="+ 저장", command=self.save_current_preset).pack(side="left", expand=True, fill="x", padx=2)
         ttk.Button(pre_btns, text="관리", command=self.manage_presets_ui).pack(side="left", expand=True, fill="x", padx=2)
 
-        # 7. Execution Button
-        self.run_btn = ttk.Button(p_frame, text="추출 및 저장 실행", command=self.run_process, style="Accent.TButton")
-        self.run_btn.pack(fill="x", pady=(10, 20))
-
         # 8. Column Selection (Right Pane - Not in scrollable area)
-        col_frame = ttk.LabelFrame(self, text="컬럼 선택", padding=10)
+        col_frame = ttk.LabelFrame(self, text="컬럼 선택", padding=10, labelanchor="n")
         col_frame.pack(side="right", fill="both", expand=True, padx=(10, 0))
         
-        self.scroll_frame = ScrollableFrame(col_frame)
+        self.scroll_frame = ScrollableFrame(col_frame, horizontal=True)
         self.scroll_frame.pack(fill="both", expand=True)
         
         btn_bar = ttk.Frame(col_frame)
@@ -224,7 +247,7 @@ class MatchTab(ttk.Frame):
             for idx, col in enumerate(self.cloud_headers):
                 var = tk.BooleanVar(value=True)
                 self.col_vars[col] = var
-                ttk.Checkbutton(self.scroll_frame.scrollable_frame, text=str(col), variable=var).grid(row=idx//4, column=idx%4, sticky="w", padx=15, pady=6)
+                ttk.Checkbutton(self.scroll_frame.scrollable_frame, text=str(col), variable=var).grid(row=idx//6, column=idx%6, sticky="w", padx=15, pady=6)
 
             
             self.filter_combo['values'] = self.cloud_headers
@@ -320,7 +343,7 @@ class MatchTab(ttk.Frame):
         for idx, col in enumerate(cols):
             var = tk.BooleanVar(value=True)
             self.col_vars[col] = var
-            ttk.Checkbutton(self.scroll_frame.scrollable_frame, text=str(col), variable=var).grid(row=idx//4, column=idx%4, sticky="w", padx=15, pady=6)
+            ttk.Checkbutton(self.scroll_frame.scrollable_frame, text=str(col), variable=var).grid(row=idx//6, column=idx%6, sticky="w", padx=15, pady=6)
 
 
     def add_filter_rule(self):
@@ -490,16 +513,34 @@ class MatchTab(ttk.Frame):
         threading.Thread(target=task, daemon=True).start()
 
     def load_registered_sources(self):
-        """Pre-fill URLs from registered config."""
+        """Pre-fill URLs from registered config and lock fields."""
         reg = self.config.get('registered_sources', {})
         self.cloud_url.set(reg.get('github_url', ""))
         self.cloud_token.set(reg.get('github_token', ""))
         self.gs_url.set(reg.get('google_sheets_url', ""))
         self.gs_sheet_names.set(reg.get('google_sheet_names', ""))
+        
+        # Initially lock if there is data
+        for ent in [self.ent_c_url, self.ent_c_token, self.ent_g_url, self.ent_g_names]:
+            if ent.get():
+                ent.config(state="disabled")
+
+    def unlock_source_config(self, source_type):
+        """Unlock fields with password."""
+        pw = simpledialog.askstring("관리자 인증", "수정 권한을 얻으려면 관리자 암호를 입력하세요:", show="*")
+        if pw == "3867":
+            if source_type == 'github':
+                self.ent_c_url.config(state="normal")
+                self.ent_c_token.config(state="normal")
+            else:
+                self.ent_g_url.config(state="normal")
+                self.ent_g_names.config(state="normal")
+            messagebox.showinfo("인증 성공", "입력창이 활성화되었습니다.")
+        else:
+            messagebox.showerror("오류", "암호가 틀렸습니다.")
 
     def save_source_config(self, source_type):
         """Save Cloud/Google URLs with password authentication."""
-        # Custom PW prompt to avoid basic dialog limitations
         pw = simpledialog.askstring("관리자 인증", "설정을 저장하려면 관리자 암호를 입력하세요:", show="*")
         if pw != "3867":
             messagebox.showerror("오류", "암호가 틀렸습니다. 저장 권한이 없습니다.")
@@ -509,13 +550,18 @@ class MatchTab(ttk.Frame):
         if source_type == 'github':
             reg['github_url'] = self.cloud_url.get().strip()
             reg['github_token'] = self.cloud_token.get().strip()
+            self.ent_c_url.config(state="disabled")
+            self.ent_c_token.config(state="disabled")
         else:
             reg['google_sheets_url'] = self.gs_url.get().strip()
             reg['google_sheet_names'] = self.gs_sheet_names.get().strip()
+            self.ent_g_url.config(state="disabled")
+            self.ent_g_names.config(state="disabled")
         
         # Persist to JSON
         try:
-            with open("config.json", 'w', encoding='utf-8') as f:
+            path = self.config_path or "config.json"
+            with open(path, 'w', encoding='utf-8') as f:
                 json.dump(self.config, f, indent=4, ensure_ascii=False)
             messagebox.showinfo("완료", "소스 설정이 안전하게 등록 및 저장되었습니다.")
         except Exception as e:
@@ -546,7 +592,7 @@ class MatchTab(ttk.Frame):
             for idx, col in enumerate(self.cloud_headers):
                 var = tk.BooleanVar(value=True)
                 self.col_vars[col] = var
-                ttk.Checkbutton(self.scroll_frame.scrollable_frame, text=str(col), variable=var).grid(row=idx//4, column=idx%4, sticky="w", padx=15, pady=6)
+                ttk.Checkbutton(self.scroll_frame.scrollable_frame, text=str(col), variable=var).grid(row=idx//6, column=idx%6, sticky="w", padx=15, pady=6)
 
             
             self.filter_combo['values'] = self.cloud_headers
