@@ -53,14 +53,27 @@ class GitHubSync:
                 "branch": "main" # Can be made dynamic if needed
             }
             
-            response = requests.put(api_url, headers=headers, json=data, timeout=30)
+            import time
+            max_retries = 3
+            last_error = ""
             
-            if response.status_code in [201, 200]:
-                return True, f"성공적으로 업로드되었습니다: {remote_path}"
-            else:
-                error_data = response.json()
-                msg = error_data.get("message", "Unknown error")
-                return False, f"업로드 실패 (HTTP {response.status_code}): {msg}"
+            for attempt in range(max_retries):
+                try:
+                    response = requests.put(api_url, headers=headers, json=data, timeout=60) # Increased timeout
+                    
+                    if response.status_code in [201, 200]:
+                        return True, f"성공적으로 업로드되었습니다: {remote_path}"
+                    else:
+                        error_data = response.json()
+                        msg = error_data.get("message", "Unknown error")
+                        return False, f"업로드 실패 (HTTP {response.status_code}): {msg}"
+                except (requests.exceptions.RequestException, Exception) as e:
+                    last_error = str(e)
+                    if attempt < max_retries - 1:
+                        time.sleep(2) # Wait 2 seconds before retry
+                        continue
+                    else:
+                        return False, f"업로드 중 오류 발생 (3회 시도 실패): {last_error}"
                 
         except Exception as e:
             return False, f"업로드 중 오류 발생: {str(e)}"
