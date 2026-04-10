@@ -1,0 +1,31 @@
+{
+    "locked_features": {
+        "batch_tab": false,
+        "cleaner_tab": false,
+        "cloud_source": false,
+        "google_sheets": false
+    },
+    "branding": {
+        "name": "EasyMatch",
+        "version": "v3.7 Pro",
+        "theme": "arctic"
+    },
+    "telemetry": {
+        "enabled": true,
+        "url": "https://script.google.com/macros/s/AKfycbx10peXFFkDrBkWwf_qJIFO_QDVHie8Aq01LA6Sd5PXCmdQSao8lwKj_3LuJQdYU8LV/exec"
+    },
+    "license_key": "DE88-5528-700D-54C7",
+    "user_info": {
+        "name": "이현주",
+        "email": "bough38@hanmail.com"
+    },
+    "registered_sources": {
+        "github_url": "https://github.com/bough38-web/Enterprise-Data-Suite.git",
+        "github_token": "",
+        "google_sheets_url": "https://docs.google.com/spreadsheets/d/1oFaGLNJCWc-g4RY_OVQZXyktkcu4FHeGSxWUKYw9kc4/edit?usp=sharing",
+        "google_sheet_names": "",
+        "remote_presets_url": "",
+        "remote_update_url": ""
+    },
+    "admin_contact": "bough38@gmail.com"
+}
