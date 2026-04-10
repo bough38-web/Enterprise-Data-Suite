@@ -239,10 +239,25 @@ class AdminSettingsPopup(tk.Toplevel):
         ent_contact = ttk.Entry(main, textvariable=self.admin_contact)
         ent_contact.pack(fill="x", pady=2)
         
+        # [ NETWORK ] Advanced Settings
+        ttk.Separator(main, orient="horizontal").pack(fill="x", pady=20)
+        ttk.Label(main, text="[ NETWORK ] 네트워크 고급 설정", font=("System", 11, "bold")).pack(pady=(0, 10))
+        
+        ttk.Label(main, text="HTTP/HTTPS 프록시 주소 (선택):", font=("System", 9)).pack(anchor="w")
+        self.net_proxy = tk.StringVar(value=self.config.get('network', {}).get('proxy', ''))
+        self.ent_proxy = ttk.Entry(main, textvariable=self.net_proxy, placeholder="예: http://proxy.com:8080")
+        self.ent_proxy.pack(fill="x", pady=2)
+        
+        self.net_verify = tk.BooleanVar(value=self.config.get('network', {}).get('ssl_verify', True))
+        ttk.Checkbutton(main, text="SSL 인증서 검증 활성화 (권장)", variable=self.net_verify).pack(anchor="w", pady=5)
+        
+        ttk.Label(main, text="※ 사내 보안망에서 업로드 오류 시 'SSL 검증'을 해제해 보세요.", 
+                  font=("System", 8), foreground="gray").pack(anchor="w")
+
         # macOS clipboard fix for Toplevel entries
         import sys
         if sys.platform == "darwin":
-            for entry in [ent_contact, self.theme_combo, self.reg_github, self.reg_google, self.reg_token, self.reg_presets, self.reg_update, self.tel_url]:
+            for entry in [ent_contact, self.theme_combo, self.reg_github, self.reg_google, self.reg_token, self.reg_presets, self.reg_update, self.tel_url, self.ent_proxy]:
                 if hasattr(entry, 'bind'):
                     entry.bind("<Command-v>", lambda e: e.widget.event_generate("<<Paste>>"))
                     entry.bind("<Command-c>", lambda e: e.widget.event_generate("<<Copy>>"))
@@ -269,6 +284,11 @@ class AdminSettingsPopup(tk.Toplevel):
         
         # Save Admin Contact
         self.config['admin_contact'] = self.admin_contact.get().strip()
+        
+        # Save Network Settings
+        if 'network' not in self.config: self.config['network'] = {}
+        self.config['network']['proxy'] = self.net_proxy.get().strip()
+        self.config['network']['ssl_verify'] = self.net_verify.get()
         
         # Save Theme
         if 'branding' not in self.config: self.config['branding'] = {}

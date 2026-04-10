@@ -264,7 +264,9 @@ class BatchTab(ttk.Frame):
             def upload_task():
                 try:
                     self.prog_var.set("클라우드 업로드 중...")
-                    success, msg = GitHubSync.upload_file(token, url, saved_path)
+                    # Pass network config for proxy/SSL bypass
+                    net_cfg = master.config.get('network', {})
+                    success, msg = GitHubSync.upload_file(token, url, saved_path, network_config=net_cfg)
                     if success:
                         messagebox.showinfo("업로드 성공", msg)
                     else:
@@ -307,7 +309,9 @@ class BatchTab(ttk.Frame):
         def upload_task():
             try:
                 self.prog_var.set("클라우드 전송 중...")
-                success, msg = GitHubSync.upload_file(token, url, path_to_upload)
+                # Pass network config
+                net_cfg = master.config.get('network', {})
+                success, msg = GitHubSync.upload_file(token, url, path_to_upload, network_config=net_cfg)
                 if success:
                     messagebox.showinfo("전송 성공", f"보안 전송 완료!\n{msg}")
                 else:

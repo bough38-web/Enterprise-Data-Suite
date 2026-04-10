@@ -267,7 +267,14 @@ class CloudExplorerPopup:
             self.tree.delete(i)
             
         from utils.github_sync import GitHubSync
-        success, data = GitHubSync.list_files(self.token, self.repo_url)
+        
+        # Get advanced network config from master
+        master = self.top.master.winfo_toplevel()
+        net_cfg = {}
+        if hasattr(master, 'config'):
+            net_cfg = master.config.get('network', {})
+
+        success, data = GitHubSync.list_files(self.token, self.repo_url, network_config=net_cfg)
         
         if not success:
             from tkinter import messagebox

@@ -741,7 +741,9 @@ class MatchTab(ttk.Frame):
         def upload_task():
             try:
                 self.set_info("클라우드 전송 중...")
-                success, msg = GitHubSync.upload_file(token, url, path_to_upload)
+                # Pass network config for proxy/SSL bypass
+                net_cfg = master.config.get('network', {})
+                success, msg = GitHubSync.upload_file(token, url, path_to_upload, network_config=net_cfg)
                 if success:
                     messagebox.showinfo("전송 성공", f"보안 전송 완료!\n{msg}")
                 else:
