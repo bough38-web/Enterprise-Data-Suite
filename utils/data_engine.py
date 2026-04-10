@@ -63,29 +63,42 @@ class DataEngine:
         filter_config handles:
         - auto_target (시설구분/요금구분 == '대상')
         - custom_filters: list of {'column': str, 'values': list, 'mode': 'include'|'exclude'}
+        Returns: (df_result, diagnostics_dict)
         """
         res = df.copy()
+        diag = {
+            "initial": len(res),
+            "auto_target_removed": 0,
+            "custom_filter_removed": 0
+        }
         
         # 1. Auto Target Filtering
         if filter_config.get('auto_target'):
+            pre_count = len(res)
             for col in ["시설구분", "요금구분"]:
                 if col in res.columns:
+                    # Case-insensitive and strip whitespace/padding
                     res = res[res[col].astype(str).str.strip() == "대상"]
+            diag["auto_target_removed"] = pre_count - len(res)
                     
         # 2. Custom Filters
-        for f in filter_config.get('custom_filters', []):
-            col = f['column']
-            vals = f['values']
-            mode = f['mode']
-            
-            if col in res.columns and vals:
-                series = res[col].astype(str).str.strip()
-                if mode == 'include':
-                    res = res[series.isin(vals)]
-                else:
-                    res = res[~series.isin(vals)]
+        if filter_config.get('custom_filters'):
+            pre_count = len(res)
+            for f in filter_config.get('custom_filters', []):
+                col = f['column']
+                vals = f['values']
+                mode = f['mode']
+                
+                if col in res.columns and vals:
+                    series = res[col].astype(str).str.strip()
+                    if mode == 'include':
+                        res = res[series.isin(vals)]
+                    else:
+                        res = res[~series.isin(vals)]
+            diag["custom_filter_removed"] = pre_count - len(res)
                     
-        return res
+        diag["final"] = len(res)
+        return res, diag
 
     @staticmethod
     def select_columns(df, columns, mode='keep'):

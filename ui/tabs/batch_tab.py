@@ -146,7 +146,7 @@ class BatchTab(ttk.Frame):
                         "auto_target": preset.get("auto_target", True),
                         "custom_filters": preset.get("active_filters", [])
                     }
-                    df_res = DataEngine.apply_filters(df_res, f_config)
+                    df_res, _diag = DataEngine.apply_filters(df_res, f_config)
 
                     # 3. Column Selection
                     df_res = DataEngine.select_columns(df_res, preset.get("columns", []), preset.get("mode", "keep"))

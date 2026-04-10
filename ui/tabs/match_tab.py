@@ -511,16 +511,22 @@ class MatchTab(ttk.Frame):
                 self.set_info("처리 중...")
                 df_res = self.df_left.copy()
                 
+                # Matching
                 if self.df_right is not None:
-                    key = DataEngine.auto_find_key(self.df_left, self.df_right)
-                    matches = DataEngine.auto_match_columns(self.df_left, self.df_right)
+                    # In existing code, it was self.df_left.copy() at line 512
+                    # We'll use the working copy df_res
+                    key = DataEngine.auto_find_key(df_res, self.df_right)
+                    matches = DataEngine.auto_match_columns(df_res, self.df_right)
                     
                     if self.fuzzy_match.get():
-                        df_res = DataEngine.perform_fuzzy_matching(self.df_left, self.df_right, key)
+                        df_res = DataEngine.perform_fuzzy_matching(df_res, self.df_right, key)
                     else:
-                        df_res = DataEngine.perform_matching(self.df_left, self.df_right, key, matches)
+                        df_res = DataEngine.perform_matching(df_res, self.df_right, key, matches)
                 
-                df_res = DataEngine.apply_filters(df_res, {"auto_target": self.auto_target.get(), "custom_filters": self.active_filters})
+                # Apply Filters with Diagnostics
+                df_res, diag = DataEngine.apply_filters(df_res, {"auto_target": self.auto_target.get(), "custom_filters": self.active_filters})
+                
+                # Select Columns
                 df_res = DataEngine.select_columns(df_res, [c for c, v in self.col_vars.items() if v.get()], self.mode_var.get())
                 df_res = DataEngine.add_source_info(df_res, self.left_path)
                 
@@ -536,7 +542,6 @@ class MatchTab(ttk.Frame):
                         sheet_name = ExcelHandler.write_to_active_excel(df_res, "추출결과")
                         res_msg = f"엑셀 완료 (시트: {sheet_name})"
                     except Exception as export_err:
-                        # Fallback for macOS OSERROR: -1728 or other Automation issues
                         if messagebox.askyesno("엑셀 연동 실패", 
                             f"열려있는 엑셀에 데이터를 직접 쓸 수 없습니다.\n오류: {export_err}\n\n결과물을 파일로 대신 저장하시겠습니까?"):
                             out_path = filedialog.asksaveasfilename(
@@ -552,7 +557,15 @@ class MatchTab(ttk.Frame):
                             raise export_err
                 
                 self.set_info("완료")
-                messagebox.showinfo("성공", f"{res_msg}\n처리 행: {len(df_res):,}건")
+                
+                # Detailed breakdown for user transparency
+                detail_msg = (
+                    f"1. 원본 데이터: {diag['initial']:,}건\n"
+                    f"2. 대상 필터(시설/요금) 제거: -{diag['auto_target_removed']:,}건\n"
+                    f"3. 조건 필터(사용자) 제거: -{diag['custom_filter_removed']:,}건\n"
+                    f"4. 최종 추출 수량: {diag['final']:,}건"
+                )
+                messagebox.showinfo("추출 완료", f"{res_msg}\n\n[처리 상세 내역]\n{detail_msg}")
                 
                 # Ping Task Complete
                 try:
