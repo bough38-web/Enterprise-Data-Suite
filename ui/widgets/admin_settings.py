@@ -2,6 +2,8 @@ import tkinter as tk
 from tkinter import ttk, messagebox
 import json
 from pathlib import Path
+import webbrowser
+import os
 from utils.license_manager import LicenseManager
 from utils.telemetry import TelemetryManager
 from utils.update_manager import UpdateManager
@@ -12,6 +14,13 @@ class AdminSettingsPopup(tk.Toplevel):
         self.title("Administrator Settings")
         self.geometry("480x850") # Slightly wider and taller
         
+        # Inherit standardized fonts from parent
+        self.fonts = getattr(parent, 'fonts', {
+            "h1": ("Segoe UI Variable Text", 13, "bold"),
+            "h2": ("Segoe UI Variable Text", 11, "bold"),
+            "normal": ("Segoe UI Variable Text", 10)
+        })
+
         # Inherit stable config path from parent app
         if hasattr(parent, 'config_path'):
             self.config_path = parent.config_path
@@ -28,10 +37,10 @@ class AdminSettingsPopup(tk.Toplevel):
         self.auth_frame = ttk.Frame(self, padding=40)
         self.auth_frame.pack(fill="both", expand=True)
         
-        ttk.Label(self.auth_frame, text="[ AUTH ] 관리자 암호를 입력하세요", font=("System", 11, "bold")).pack(pady=20)
+        ttk.Label(self.auth_frame, text="[ AUTH ] 관리자 암호를 입력하세요", font=self.fonts["h2"]).pack(pady=20)
         
         self.pw_var = tk.StringVar()
-        pw_entry = ttk.Entry(self.auth_frame, textvariable=self.pw_var, show="*", font=("System", 12), justify="center")
+        pw_entry = ttk.Entry(self.auth_frame, textvariable=self.pw_var, show="*", font=self.fonts["normal"], justify="center")
         pw_entry.pack(fill="x", pady=10)
         pw_entry.focus_set()
         
@@ -63,7 +72,7 @@ class AdminSettingsPopup(tk.Toplevel):
         main = ttk.Frame(self.scroll_area.scrollable_frame, padding=25)
         main.pack(fill="both", expand=True)
         
-        ttk.Label(main, text="[ CONFIG ] 기능 제한 설정 (EasyMatch Pro)", font=("System", 12, "bold")).pack(pady=(0, 20))
+        ttk.Label(main, text="[ CONFIG ] 기능 제한 설정 (EasyMatch Pro)", font=self.fonts["h2"]).pack(pady=(0, 20))
         
         # Load Current Config
         with open(self.config_path, 'r', encoding='utf-8') as f:
@@ -86,12 +95,9 @@ class AdminSettingsPopup(tk.Toplevel):
         
         ttk.Label(main, text="* 설정 변경 후 프로그램을 재시작해야 적용됩니다.", foreground="gray", font=("System", 8)).pack()
         
-        btn_frame = ttk.Frame(main)
-        btn_frame.pack(side="bottom", fill="x", pady=10)
-
         # License Management Section
         ttk.Separator(main, orient="horizontal").pack(fill="x", pady=20)
-        ttk.Label(main, text="[ LICENSE ] 라이센스 관리 (Key Generator)", font=("System", 11, "bold")).pack(pady=(0, 10))
+        ttk.Label(main, text="[ LICENSE ] 라이센스 관리 (Key Generator)", font=self.fonts["h2"]).pack(pady=(0, 10))
         
         # Current Machine Info
         mid = LicenseManager.get_machine_id()
@@ -130,7 +136,7 @@ class AdminSettingsPopup(tk.Toplevel):
 
         # Telemetry Section
         ttk.Separator(main, orient="horizontal").pack(fill="x", pady=15)
-        ttk.Label(main, text="[ MONITOR ] 원격 사용현황 모니터링 (Telemetry)", font=("System", 11, "bold")).pack(pady=(0, 10))
+        ttk.Label(main, text="[ MONITOR ] 원격 사용현황 모니터링 (Telemetry)", font=self.fonts["h2"]).pack(pady=(0, 10))
         
         tel_cfg = self.config.get('telemetry', {})
         self.tel_enabled = tk.BooleanVar(value=tel_cfg.get('enabled', False))
@@ -155,7 +161,7 @@ class AdminSettingsPopup(tk.Toplevel):
 
         # Registered Sources Section
         ttk.Separator(main, orient="horizontal").pack(fill="x", pady=20)
-        ttk.Label(main, text="[ SOURCES ] 고정 소스 관리 (GitHub / Google)", font=("System", 11, "bold")).pack(pady=(0, 10))
+        ttk.Label(main, text="[ SOURCES ] 고정 소스 관리 (GitHub / Google)", font=self.fonts["h2"]).pack(pady=(0, 10))
         
         reg_frame = ttk.Frame(main)
         reg_frame.pack(fill="x")
@@ -223,7 +229,10 @@ class AdminSettingsPopup(tk.Toplevel):
 
         ttk.Button(reg_frame, text="프로그램 업데이트 확인 (Check Version)", command=manual_check_update).pack(fill="x", pady=5)
         
-        ttk.Label(main, text="기타 관리 설정", font=("System", 11, "bold")).pack(pady=(20, 10))
+        ttk.Label(main, text="기타 관리 설정", font=self.fonts["h2"]).pack(pady=(20, 10))
+        
+        # Manual Button
+        ttk.Button(main, text="운영 매뉴얼 보기", command=self.open_manual).pack(fill="x", pady=5)
         
         # Theme Selection
         theme_frame = ttk.Frame(main)
@@ -241,11 +250,11 @@ class AdminSettingsPopup(tk.Toplevel):
         
         # [ NETWORK ] Advanced Settings
         ttk.Separator(main, orient="horizontal").pack(fill="x", pady=20)
-        ttk.Label(main, text="[ NETWORK ] 네트워크 고급 설정", font=("System", 11, "bold")).pack(pady=(0, 10))
+        ttk.Label(main, text="[ NETWORK ] 네트워크 고급 설정", font=self.fonts["h2"]).pack(pady=(0, 10))
         
         ttk.Label(main, text="HTTP/HTTPS 프록시 주소 (선택):", font=("System", 9)).pack(anchor="w")
         self.net_proxy = tk.StringVar(value=self.config.get('network', {}).get('proxy', ''))
-        self.ent_proxy = ttk.Entry(main, textvariable=self.net_proxy, placeholder="예: http://proxy.com:8080")
+        self.ent_proxy = ttk.Entry(main, textvariable=self.net_proxy)
         self.ent_proxy.pack(fill="x", pady=2)
         
         self.net_verify = tk.BooleanVar(value=self.config.get('network', {}).get('ssl_verify', True))
@@ -263,8 +272,17 @@ class AdminSettingsPopup(tk.Toplevel):
                     entry.bind("<Command-c>", lambda e: e.widget.event_generate("<<Copy>>"))
                     entry.bind("<Command-a>", lambda e: (e.widget.selection_range(0, 'end'), e.widget.icursor('end')))
 
-        # Removed duplicate save button at bottom of main frame as it's now fixed
-
+    def open_manual(self):
+        """Open the local operational manual in the default browser."""
+        try:
+            # Look for manual.html in the current directory
+            manual_path = os.path.join(os.getcwd(), "manual.html")
+            if os.path.exists(manual_path):
+                webbrowser.open(f"file://{manual_path}")
+            else:
+                messagebox.showerror("오류", "매뉴얼 파일(manual.html)을 찾을 수 없습니다.\n루트 폴더에 파일이 있는지 확인하세요.")
+        except Exception as e:
+            messagebox.showerror("오류", f"매뉴얼을 여는 중 오류가 발생했습니다: {e}")
 
     def save_and_close(self):
         for key, var in self.toggles.items():

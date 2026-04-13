@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EasyMatch Pro 운영 매뉴얼</title>
+    <style>
+        :root {
+            --primary: #0078D4;
+            --accent: #4FD1C5;
+            --bg-dark: #0F172A;
+            --surface-dark: #1E293B;
+            --text-dark: #E2E8F0;
+            --bg-light: #F8F9FA;
+            --text-light: #212529;
+            --border: #334155;
+        }
+
+        body {
+            font-family: 'Segoe UI Variable Text', 'Segoe UI', -apple-system, BlinkMacSystemFont, 'Malgun Gothic', sans-serif;
+            line-height: 1.6;
+            margin: 0;
+            padding: 0;
+            background-color: var(--bg-light);
+            color: var(--text-light);
+            scroll-behavior: smooth;
+        }
+
+        .sidebar {
+            width: 260px;
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            background: var(--bg-dark);
+            color: white;
+            padding: 20px;
+            overflow-y: auto;
+            box-sizing: border-box;
+        }
+
+        .sidebar h2 {
+            font-size: 1.2rem;
+            color: var(--accent);
+            border-bottom: 1px solid var(--border);
+            padding-bottom: 10px;
+        }
+
+        .sidebar ul {
+            list-style: none;
+            padding: 0;
+        }
+
+        .sidebar ul li {
+            margin: 15px 0;
+        }
+
+        .sidebar ul li a {
+            color: #CBD5E1;
+            text-decoration: none;
+            font-size: 0.95rem;
+            transition: 0.2s;
+        }
+
+        .sidebar ul li a:hover {
+            color: white;
+            padding-left: 5px;
+        }
+
+        .content {
+            margin-left: 280px;
+            padding: 40px;
+            max-width: 900px;
+        }
+
+        .hero {
+            background: linear-gradient(135deg, #0078D4 0%, #001F3F 100%);
+            color: white;
+            padding: 40px;
+            border-radius: 12px;
+            margin-bottom: 40px;
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        .card {
+            background: white;
+            border-radius: 8px;
+            padding: 25px;
+            margin-bottom: 30px;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            border: 1px solid #E2E8F0;
+        }
+
+        .card h3 {
+            margin-top: 0;
+            color: var(--primary);
+            border-left: 4px solid var(--primary);
+            padding-left: 15px;
+        }
+
+        .badge {
+            display: inline-block;
+            padding: 2px 8px;
+            border-radius: 4px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            margin-right: 5px;
+            background: #E0F2FE;
+            color: #0369A1;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 15px 0;
+        }
+
+        th, td {
+            text-align: left;
+            padding: 12px;
+            border-bottom: 1px solid #E2E8F0;
+        }
+
+        th {
+            background: #F1F5F9;
+            color: #475569;
+            font-size: 0.9rem;
+        }
+
+        .btn-desc {
+            font-weight: bold;
+            color: #334155;
+            background: #F8FAFC;
+            padding: 2px 6px;
+            border: 1px solid #CBD5E1;
+            border-radius: 4px;
+        }
+
+        .tip {
+            background: #FFFBEB;
+            border-left: 4px solid #F59E0B;
+            padding: 15px;
+            margin: 10px 0;
+            border-radius: 4px;
+        }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <h2>EasyMatch Pro</h2>
+    <ul>
+        <li><a href="#intro">1. 시스템 개요</a></li>
+        <li><a href="#match">2. 스마트 매칭 (Match)</a></li>
+        <li><a href="#batch">3. 일괄 처리 (Batch)</a></li>
+        <li><a href="#cleaner">4. 데이터 품질 관리 (Cleaner)</a></li>
+        <li><a href="#stats">5. 통계 및 대시보드</a></li>
+        <li><a href="#admin">6. 관리자 및 동기화 설정</a></li>
+    </ul>
+</div>
+
+<div class="content">
+    <div id="intro" class="hero">
+        <h1>EasyMatch Pro v3.9</h1>
+        <p>복잡한 데이터 매칭과 정제 작업을 자동화하는 초고속 동기화 솔루션</p>
+    </div>
+
+    <div class="card">
+        <h3>1. 시스템 개요</h3>
+        <p>본 시스템은 대량의 엑셀 데이터를 특정 조건에 따라 실시간으로 추출하고, 클라우드(GitHub) 및 구글 스프레드시트와의 완벽한 동기화를 통해 기업용 데이터를 중앙 집중 관리하는 데 최적화되어 있습니다.</p>
+        <div class="tip">
+            <strong>핵심 특징:</strong> Per-Monitor DPI Aware V2 기술 적용으로 고해상도 모니터에서도 선명한 가독성을 제공하며, 4가지 전문가용 테마를 지원합니다.
+        </div>
+    </div>
+
+    <div id="match" class="card">
+        <h3>2. 스마트 매칭 (Smart Match Tab)</h3>
+        <p>단일 파일 또는 현재 열려있는 엑셀 시트를 대상으로 전문적인 필터링과 매칭을 수행합니다.</p>
+        <table>
+            <tr><th>기능 버튼</th><th>상세 설명</th></tr>
+            <tr><td><span class="btn-desc">활성 엑셀 연동</span></td><td>현재 띄워져 있는 엑셀 창의 내용을 즉시 분석 소스로 로드합니다.</td></tr>
+            <tr><td><span class="btn-desc">Peek (헤더 미리보기)</span></td><td>파일을 로드하기 전, 선택한 파일의 최상단 컬럼 구조를 미리 확인합니다.</td></tr>
+            <tr><td><span class="btn-desc">📂 탐색 (Cloud Explorer)</span></td><td>GitHub 클라우드에 업로드된 파일을 날짜별로 탐색하여 로컬로 로드합니다.</td></tr>
+            <tr><td><span class="btn-desc">조건 필터 관리</span></td><td>매칭 시 제외하거나 포함할 특정 값들을 체크박스 형태로 선택합니다.</td></tr>
+            <tr><td><span class="btn-desc">작업 실행</span></td><td>설정한 규칙에 따라 데이터를 가공하여 화면에 출력하거나 파일로 저장합니다.</td></tr>
+        </table>
+    </div>
+
+    <div id="batch" class="card">
+        <h3>3. 일괄 처리 (Batch Processing Tab)</h3>
+        <p>수백 개의 파일이 담긴 폴더를 통째로 가공하여 하나의 결과물로 병합합니다.</p>
+        <ul>
+            <li><strong>소스 폴더 선택:</strong> 원본 Excel/CSV 파일들이 모여있는 폴더를 지정합니다.</li>
+            <li><strong>결과 합치기 옵션:</strong> 각 파일의 결과물을 하나로 묶어 대용량 통합 문서를 생성합니다.</li>
+            <li><strong>공통 참조 파일:</strong> 모든 파일에 공통으로 매칭할 기준 정보(예: 마스터 주소록)를 설정합니다.</li>
+        </ul>
+    </div>
+
+    <div id="cleaner" class="card">
+        <h3>4. 데이터 품질 관리 (Data Cleaner Tab)</h3>
+        <p>데이터의 무결성을 높이기 위해 불필요한 요소를 제거하거나 규격을 통일합니다.</p>
+        <table>
+            <tr><th>주요 도구</th><th>기능 설명</th></tr>
+            <tr><td><span class="badge">중복 제거</span></td><td>지정한 기준 컬럼값이 중복된 행을 삭제하여 고유 값만 유지합니다.</td></tr>
+            <tr><td><span class="badge">공백 제거 (Trim)</span></td><td>텍스트 데이터의 앞뒤에 포함된 불필요한 빈 칸을 일괄 삭제합니다.</td></tr>
+            <tr><td><span class="badge">전화번호 정규화</span></td><td>특수문자를 제거하고 숫자만 추출하여 데이터 매칭 확률을 극대화합니다.</td></tr>
+            <tr><td><span class="badge">결측치(NaN) 처리</span></td><td>비어있는 셀을 '0' 또는 지정한 기본값으로 한 번에 채웁니다.</td></tr>
+        </table>
+    </div>
+
+    <div id="stats" class="card">
+        <h3>5. 통계 및 대시보드 (Data Insights)</h3>
+        <p>로드된 데이터의 특징을 시각적으로 분석합니다.</p>
+        <p>- <strong>기본 정보:</strong> 전체 행/열의 개수 및 결측치 현황을 실시간 파악합니다.</p>
+        <p>- <strong>Top 10 분포:</strong> 선택한 컬럼에서 가장 빈도가 높은 10개 항목을 가독성 높은 막대 차트로 가시화합니다.</p>
+    </div>
+
+    <div id="admin" class="card">
+        <h3>6. 관리자 및 동기화 설정 (Admin Settings)</h3>
+        <p>프로그램의 핵심 보안 및 연동 로직을 제어합니다. (암호: 3867)</p>
+        <table>
+            <tr><th>구분</th><th>설정 세부 사항</th></tr>
+            <tr><td><span class="badge">License</span></td><td>기기 고유 ID에 기반한 라이센스 키를 등록하여 기능을 활성화합니다.</td></tr>
+            <tr><td><span class="badge">GitHub Sync</span></td><td>Personal Access Token 및 저장소 URL을 입력하여 클라우드 팀 협업 환경을 구축합니다.</td></tr>
+            <tr><td><span class="badge">Network</span></td><td>사내 보안망 환경에서 <strong>'SSL 검증 해제'</strong> 및 <strong>'프록시 서버'</strong> 설정을 지원합니다.</td></tr>
+            <tr><td><span class="badge">Branding</span></td><td>사용자 취향에 맞는 4가지 프리미엄 테마를 선택할 수 있습니다.</td></tr>
+        </table>
+    </div>
+</div>
+
+</body>
+</html>
