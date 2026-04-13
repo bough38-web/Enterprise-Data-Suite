@@ -33,67 +33,74 @@ class BatchTab(ttk.Frame):
         self.build_ui()
 
     def build_ui(self):
-        main = ttk.Frame(self, padding=30)
-        main.pack(fill="both", expand=True)
+        # UI Styling Integration
+        self.fonts = getattr(self.master, 'fonts', {})
+        self.sf = getattr(self.master, 'scaling_factor', 1.0)
 
-        ttk.Label(main, text="폴더 일괄 처리 (Batch Folder Processing)", font=("System", 12, "bold")).pack(anchor="w", pady=(0, 20))
+        # Main Container with Optimized Padding
+        main_p = ttk.Frame(self, padding=20)
+        main_p.pack(fill="both", expand=True)
 
-        # Folder Selection
-        f_frame = ttk.LabelFrame(main, text="경로 설정", padding=20)
-        f_frame.pack(fill="x", pady=(10, 25))
-        create_help_btn(f_frame, "배치 경로 가이드", 
+        header = ttk.Frame(main_p, padding=(0, 0, 0, 10))
+        header.pack(fill="x")
+        ttk.Label(header, text="📂 Folder Batch Processing", font=self.fonts.get("h1"), foreground="#0078D4").pack(side="left")
+
+        # 1. Config Section (Condensed)
+        conf_lf = ttk.LabelFrame(main_p, text="배치 작업 설정", padding=12, labelanchor="n")
+        conf_lf.pack(fill="x", pady=(0, 15))
+        create_help_btn(conf_lf, "배치 경로 가이드", 
             "- 소스 폴더: 처리할 엑셀/CSV 파일들이 들어있는 폴더입니다.\n"
             "- 결과 저장 폴더: 작업이 끝난 파일들이 저장될 위치입니다.").place(relx=1.0, x=-5, y=-5, anchor="ne")
 
         self.src_path = tk.StringVar()
-        ttk.Label(f_frame, text="소스 폴더:").grid(row=0, column=0, sticky="w")
-        ttk.Entry(f_frame, textvariable=self.src_path, width=50).grid(row=0, column=1, padx=5, pady=5)
-        ttk.Button(f_frame, text="찾아보기", command=lambda: self.browse_folder(self.src_path)).grid(row=0, column=2)
+        ttk.Label(conf_lf, text="소스 폴더:").grid(row=0, column=0, sticky="w")
+        ttk.Entry(conf_lf, textvariable=self.src_path, width=50).grid(row=0, column=1, padx=5, pady=5)
+        ttk.Button(conf_lf, text="찾아보기", command=lambda: self.browse_folder(self.src_path)).grid(row=0, column=2)
 
         self.out_path = tk.StringVar()
-        ttk.Label(f_frame, text="결과 저장 폴더:").grid(row=1, column=0, sticky="w")
-        ttk.Entry(f_frame, textvariable=self.out_path, width=50).grid(row=1, column=1, padx=5, pady=5)
-        ttk.Button(f_frame, text="찾아보기", command=lambda: self.browse_folder(self.out_path)).grid(row=1, column=2)
+        ttk.Label(conf_lf, text="결과 저장 폴더:").grid(row=1, column=0, sticky="w")
+        ttk.Entry(conf_lf, textvariable=self.out_path, width=50).grid(row=1, column=1, padx=5, pady=5)
+        ttk.Button(conf_lf, text="찾아보기", command=lambda: self.browse_folder(self.out_path)).grid(row=1, column=2)
 
-        # Preset & Options
-        opt_frame = ttk.LabelFrame(main, text="실행 규칙 (프리셋)", padding=20)
-        opt_frame.pack(fill="x", pady=(10, 25))
-        create_help_btn(opt_frame, "배치 옵션 가이드", 
+        # 2. Options Section
+        opt_lf = ttk.LabelFrame(main_p, text="처리 및 출력 옵션", padding=12, labelanchor="n")
+        opt_lf.pack(fill="x", pady=(0, 15))
+        create_help_btn(opt_lf, "배치 옵션 가이드", 
             "- 프리셋: 추출할 컬럼과 필터 규칙을 미리 저장한 프리셋을 선택합니다.\n"
             "- 결과 합치기: 모든 파일의 결과물을 하나의 엑셀 시트로 병합합니다.\n"
             "- 공통 참조: 모든 원본 파일에 대해 공통으로 매칭할 데이터가 있을 경우 선택합니다.").place(relx=1.0, x=-5, y=-5, anchor="ne")
 
-        ttk.Label(opt_frame, text="적용할 프리셋:").grid(row=0, column=0, sticky="w")
-        self.preset_combo = ttk.Combobox(opt_frame, state="readonly", width=30)
+        ttk.Label(opt_lf, text="적용할 프리셋:").grid(row=0, column=0, sticky="w")
+        self.preset_combo = ttk.Combobox(opt_lf, state="readonly", width=30)
         self.preset_combo.grid(row=0, column=1, padx=10, pady=5)
         
-        btn_grp = ttk.Frame(opt_frame)
+        btn_grp = ttk.Frame(opt_lf)
         btn_grp.grid(row=0, column=2)
         ttk.Button(btn_grp, text="새로고침", width=8, command=self.load_presets).pack(side="left", padx=2)
         ttk.Button(btn_grp, text="(Reload)", width=8, command=self.sync_presets).pack(side="left", padx=2)
 
         self.merge_all = tk.BooleanVar(value=False)
-        ttk.Checkbutton(opt_frame, text="모든 결과를 하나의 파일로 합치기", variable=self.merge_all).grid(row=1, column=0, columnspan=2, pady=10, sticky="w")
+        ttk.Checkbutton(opt_lf, text="모든 결과를 하나의 파일로 합치기", variable=self.merge_all).grid(row=1, column=0, columnspan=2, pady=10, sticky="w")
 
         # Reference File (Common for all)
-        ttk.Label(opt_frame, text="공통 참조 파일 (선택):").grid(row=2, column=0, sticky="w")
+        ttk.Label(opt_lf, text="공통 참조 파일 (선택):").grid(row=2, column=0, sticky="w")
         self.ref_path = tk.StringVar()
-        ttk.Entry(opt_frame, textvariable=self.ref_path, width=30).grid(row=2, column=1, padx=10, pady=5)
+        ttk.Entry(opt_lf, textvariable=self.ref_path, width=30).grid(row=2, column=1, padx=10, pady=5)
         
-        btn_grp_ref = ttk.Frame(opt_frame)
+        btn_grp_ref = ttk.Frame(opt_lf)
         btn_grp_ref.grid(row=2, column=2)
         ttk.Button(btn_grp_ref, text="찾아보기", width=8, command=lambda: self.browse_file(self.ref_path)).pack(side="left", padx=2)
         ttk.Button(btn_grp_ref, text="(Cloud)", width=8, command=self.secure_upload_handler).pack(side="left", padx=2)
 
         # Progress
         self.prog_var = tk.StringVar(value="준비됨")
-        ttk.Label(main, textvariable=self.prog_var).pack(anchor="w")
-        self.progress = ttk.Progressbar(main, mode="determinate")
+        ttk.Label(main_p, textvariable=self.prog_var).pack(anchor="w")
+        self.progress = ttk.Progressbar(main_p, mode="determinate")
         self.progress.pack(fill="x", pady=10)
 
         # Action
-        self.run_btn = ttk.Button(main, text="일괄 처리 시작", command=self.run_batch)
-        self.run_btn.pack(pady=20, ipadx=20, ipady=5)
+        self.run_btn = ttk.Button(main_p, text="일괄 처리 시작", command=self.run_batch)
+        self.run_btn.pack(pady=10, ipadx=20, ipady=5)
 
         self.load_presets()
 

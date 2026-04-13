@@ -10,21 +10,27 @@ from PIL import Image, ImageTk
 import threading
 from utils.update_manager import UpdateManager
 
-# Windows High DPI Awareness Optimization
+# Windows High DPI Awareness Optimization (Per-Monitor V2)
 if sys.platform == "win32":
     try:
-        from ctypes import windll
-        # Set DPI awareness to 'Per-Monitor DPI Aware' (2) for maximum sharpness on modern Windows
-        # If 2 is not supported, it falls back to 1 (System DPI Aware)
+        from ctypes import windll, c_int, byref
+        # Per-Monitor DPI Aware V2 (PROCESS_PER_MONITOR_DPI_AWARE_V2 = -4)
+        # This is the modern standard for Windows 10/11 for pixel-perfect rendering
         try:
-            windll.shcore.SetProcessDpiAwareness(2)
-        except:
-            windll.shcore.SetProcessDpiAwareness(1)
-    except Exception:
-        try:
-            windll.user32.SetProcessDPIAware()
+            windll.user32.SetProcessDpiAwarenessContext(-4)
         except Exception:
-            pass
+            try:
+                # Fallback to older Per-Monitor Aware (2)
+                windll.shcore.SetProcessDpiAwareness(2)
+            except Exception:
+                try:
+                    # Fallback to System DPI Aware (1)
+                    windll.shcore.SetProcessDpiAwareness(1)
+                except Exception:
+                    # Final fallback
+                    windll.user32.SetProcessDPIAware()
+    except Exception:
+        pass
 
 # Add local directories to path to ensure imports work correctly
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
@@ -225,78 +231,82 @@ class EasyMatchPro(tk.Tk):
 
     def apply_dpi_scaling(self):
         """Forge Tkinter to match system DPI scaling for maximum sharpness on Windows."""
-        if sys.platform == "win32":
+        # Standardize Font Constants for Premium Aesthetic
+        # 'Segoe UI Variable' for Windows 11 sharpness, 'Inter' for SF-like cross-platform look
+        is_win = sys.platform == "win32"
+        self.FONT_FAMILY = "Segoe UI Variable Text" if is_win else "Inter"
+        if not is_win and sys.platform == "darwin":
+            self.FONT_FAMILY = ".AppleSystemUIFont"
+
+        if is_win:
             try:
                 from ctypes import windll
-                # Get the system DPI (Standard is 96)
                 h_dc = windll.user32.GetDC(0)
                 dpi = windll.gdi32.GetDeviceCaps(h_dc, 88) # 88 is LOGPIXELSX
                 windll.user32.ReleaseDC(0, h_dc)
                 
                 # Logic: Tkinter's point system is based on 72 DPI.
                 # Setting scaling factor to DPI / 72.0 ensures 'points' scale perfectly to pixels.
-                scaling_factor = dpi / 72.0
-                self.tk.call('tk', 'scaling', scaling_factor)
+                # We subtract a tiny correction factor on Windows to match the requested 'smaller' feel.
+                self.scaling_factor = (dpi / 72.0) * 0.95 # Slight reduction for compactness
+                self.tk.call('tk', 'scaling', self.scaling_factor)
             except Exception as e:
-                print(f"DPI Scaling adjustment failed: {e}")
-                # Fallback to a safe default if calculation fails
-                self.tk.call('tk', 'scaling', 1.5)
+                self.scaling_factor = 1.33
+                self.tk.call('tk', 'scaling', 1.33)
+        else:
+            self.scaling_factor = 1.0 # Mac handles it natively well
+            
+        # Define Global Semantic Fonts
+        # Sizes are slightly reduced (e.g., 10 instead of 11) for 'Smaller' feel on Windows
+        base_size = 10 if is_win else 13
+        self.fonts = {
+            "h1": (self.FONT_FAMILY, base_size + 3, "bold"),
+            "h2": (self.FONT_FAMILY, base_size + 1, "bold"),
+            "normal": (self.FONT_FAMILY, base_size),
+            "small": (self.FONT_FAMILY, base_size - 1),
+            "mono": ("Consolas" if is_win else "Menlo", base_size)
+        }
 
     def apply_theme(self, theme_name):
         self.config['branding']['theme'] = theme_name
         
-        # Base Theme (Standard sv-ttk)
-        base = "dark" if theme_name in ["dark", "cosmic", "graphite"] else "light"
+        # Base Theme (Standard sv-ttk as engine)
+        base = "dark" if theme_name in ["dark", "cosmic", "graphite", "ocean", "deep_ocean"] else "light"
         sv_ttk.set_theme(base)
         
-        style = ttk.Style(self)
-        
-        # Define Global Typography (Premium Hierarchy)
-        font_family = "Segoe UI" if sys.platform == "win32" else "Helvetica"
-        main_font = (font_family, 10)
-        header_font = (font_family, 20, "bold")
-        sub_header_font = (font_family, 12, "bold")
-        small_font = (font_family, 9)
-        
-        # Set default font for all ttk widgets (using points, not pixels)
-        style.configure(".", font=main_font)
-        style.configure("Header.TLabel", font=header_font)
-        style.configure("SubHeader.TLabel", font=sub_header_font)
-        style.configure("Small.TLabel", font=small_font)
-        style.configure("Small.TCheckbutton", font=small_font)
-        style.configure("TButton", font=main_font)
-        style.configure("Treeview", font=small_font, rowheight=int(28 * (self.tk.call('tk', 'scaling') / 1.33))) # Increased row height for premium feel
-        
-        # Professional Palette Definition (Premium High-Contrast)
+        # Premium Palette Definitions for Sharp Visuals
         palettes = {
-            "royal": {"bg": "#0F172A", "accent": "#FBDB78", "base": "dark"},    # Midnight Royal (Navy & Gold)
-            "forest": {"bg": "#0D1117", "accent": "#10B981", "base": "dark"},   # Forest Graphite (Emerald)
-            "arctic": {"bg": "#F9FAFB", "accent": "#2563EB", "base": "light"},  # Arctic Clean (Snow & Blue)
-            "crimson": {"bg": "#000000", "accent": "#E11D48", "base": "dark"},  # Obsidian Crimson (Black & Red)
-            "dark": {"bg": "#1E1E1E", "accent": "#4A90E2", "base": "dark"},
-            "light": {"bg": "#F8F9FA", "accent": "#4A90E2", "base": "light"}
+            "graphite": {"bg": "#121212", "fg": "#FFFFFF", "accent": "#BB86FC", "surface": "#1E1E1E"},
+            "light": {"bg": "#F8F9FA", "fg": "#212529", "accent": "#007AFF", "surface": "#FFFFFF"}, # Alpine/iPhone
+            "cosmic": {"bg": "#0B0E14", "fg": "#E0E0E0", "accent": "#00E5FF", "surface": "#21262D"},
+            "deep_ocean": {"bg": "#0D1B2A", "fg": "#E0E1DD", "accent": "#4FD1C5", "surface": "#1B263B"},
+            "dark": {"bg": "#1E1E1E", "fg": "#FFFFFF", "accent": "#0078D4", "surface": "#252526"}
         }
         
-        p = palettes.get(theme_name, palettes['forest'])
-        cfg_bg = p['bg']
-        cfg_accent = p['accent']
-        base_theme = p['base']
+        p = palettes.get(theme_name, palettes["dark"])
         
-        # Base Theme (Standard sv-ttk)
-        sv_ttk.set_theme(base_theme)
+        # Apply Custom Styling (Expert Techniques)
+        style = ttk.Style()
+        style.configure("TLabel", foreground=p["fg"], font=self.fonts["normal"])
+        style.configure("Header.TLabel", font=self.fonts["h1"], foreground=p["accent"])
+        style.configure("TButton", font=self.fonts["normal"])
+        style.configure("Accent.TButton", font=self.fonts["h2"])
         
-        # Apply Logic
-        self.configure(bg=cfg_bg)
-        style.configure("Accent.TButton", background=cfg_accent, foreground="white" if base_theme == "dark" else "black")
-        style.map("Accent.TButton", background=[("active", cfg_accent), ("pressed", cfg_accent)])
+        # Consistent Labelframe Styling for Density
+        if base == "dark":
+            self.configure(bg=p["bg"])
+            style.configure("TLabelframe", background=p["bg"], foreground=p["accent"])
+            style.configure("TLabelframe.Label", font=self.fonts["h2"], foreground=p["accent"], background=p["bg"])
+        else:
+            self.configure(bg=p["bg"])
+            style.configure("TLabelframe", background=p["bg"], foreground="#000000")
+            style.configure("TLabelframe.Label", font=self.fonts["h2"], foreground="#000000", background=p["bg"])
         
-        # Trello-style LabelFrame refinement
-        style.configure("TLabelframe", background=cfg_bg, bordercolor="#333333" if base_theme == "dark" else "#CCCCCC")
-        style.configure("TLabelframe.Label", background=cfg_bg, foreground=cfg_accent, font=sub_header_font)
-        
-        # Header/Notebook Tweaks for Comfort
-        style.configure("TNotebook", background=cfg_bg)
-        style.configure("TFrame", background=cfg_bg)
+        # Expert Fine-tuning for Trees and Notebooks
+        style.configure("Treeview", font=self.fonts["small"], rowheight=int(28 * self.scaling_factor))
+        style.configure("TNotebook", background=p["bg"])
+        style.configure("TNotebook.Tab", font=self.fonts["normal"], padding=(10, 5))
+        style.configure("TFrame", background=p["bg"])
         
         # Propagate to all open Toplevel windows
         for child in self.winfo_children():

@@ -1,6 +1,31 @@
 import tkinter as tk
 from tkinter import ttk
 
+def get_app_fonts(widget):
+    """Helper to get standardized fonts from the main application."""
+    root = widget.winfo_toplevel()
+    if hasattr(root, 'fonts'):
+        return root.fonts
+    # Fallback fonts
+    family = "Segoe UI Variable Text" if root.tk.call('tk', 'windowingsystem') == 'win32' else "Inter"
+    return {
+        "h1": (family, 13, "bold"),
+        "h2": (family, 11, "bold"),
+        "normal": (family, 10),
+        "small": (family, 9),
+        "mono": ("Consolas", 10)
+    }
+
+def get_scaling_factor(widget):
+    """Get the current DPI scaling factor."""
+    root = widget.winfo_toplevel()
+    if hasattr(root, 'scaling_factor'):
+        return root.scaling_factor
+    try:
+        return float(root.tk.call('tk', 'scaling')) / 1.3333333333333333
+    except:
+        return 1.0
+
 class ScrollableFrame(ttk.Frame):
     def __init__(self, container, horizontal=True, *args, **kwargs):
         super().__init__(container, *args, **kwargs)
@@ -42,9 +67,9 @@ class ValueFilterPopup:
         self.top.title(title)
         
         # Scale geometry based on DPI
-        scaling = parent.tk.call('tk', 'scaling')
-        w = int(450 * (scaling / 1.33))
-        h = int(600 * (scaling / 1.33))
+        sf = get_scaling_factor(parent)
+        w = int(450 * sf)
+        h = int(600 * sf)
         self.top.geometry(f"{w}x{h}")
         
         self.top.transient(parent)
@@ -57,10 +82,11 @@ class ValueFilterPopup:
         self.result = None
         self.vars = {}
 
+        fonts = get_app_fonts(self.top)
         main = ttk.Frame(self.top, padding=12)
         main.pack(fill="both", expand=True)
 
-        ttk.Label(main, text=title, font=("System", 11, "bold")).pack(anchor="w", pady=(0, 10))
+        ttk.Label(main, text=title, font=fonts["h2"]).pack(anchor="w", pady=(0, 10))
 
         # Search box
         search_frame = ttk.Frame(main)
@@ -128,9 +154,9 @@ class SheetSelectPopup:
         self.top.title(title)
         
         # Scale geometry based on DPI
-        scaling = parent.tk.call('tk', 'scaling')
-        w = int(350 * (scaling / 1.33))
-        h = int(180 * (scaling / 1.33))
+        sf = get_scaling_factor(parent)
+        w = int(350 * sf)
+        h = int(180 * sf)
         self.top.geometry(f"{w}x{h}")
         
         self.top.transient(parent)
@@ -140,10 +166,11 @@ class SheetSelectPopup:
         try: self.top.configure(bg=parent.winfo_toplevel().cget('bg'))
         except: pass
 
+        fonts = get_app_fonts(self.top)
         frame = ttk.Frame(self.top, padding=20)
         frame.pack(fill="both", expand=True)
 
-        ttk.Label(frame, text="작업할 시트를 선택하세요:", font=("System", 10)).pack(anchor="w", pady=(0, 10))
+        ttk.Label(frame, text="작업할 시트를 선택하세요:", font=fonts["normal"]).pack(anchor="w", pady=(0, 10))
         
         self.var = tk.StringVar(value=sheet_names[0] if sheet_names else "")
         combo = ttk.Combobox(frame, textvariable=self.var, values=sheet_names, state="readonly")
@@ -166,9 +193,9 @@ class HelpPopup:
         self.top.title(f"도움말: {title}")
         
         # Scale geometry based on DPI
-        scaling = parent.tk.call('tk', 'scaling')
-        w = int(400 * (scaling / 1.33))
-        h = int(300 * (scaling / 1.33))
+        sf = get_scaling_factor(parent)
+        w = int(400 * sf)
+        h = int(300 * sf)
         self.top.geometry(f"{w}x{h}")
         
         self.top.transient(parent)
@@ -183,12 +210,13 @@ class HelpPopup:
         main = ttk.Frame(self.top, padding=20)
         main.pack(fill="both", expand=True)
 
+        fonts = get_app_fonts(self.top)
         header = ttk.Frame(main)
         header.pack(fill="x", pady=(0, 10))
-        ttk.Label(header, text=title, font=("System", 12, "bold"), foreground="#0078D4").pack(side="left")
+        ttk.Label(header, text=title, font=fonts["h1"], foreground="#0078D4").pack(side="left")
 
         # Use a text widget for multi-line content
-        txt = tk.Text(main, wrap="word", font=("System", 10), bg="#F5F5F5", relief="flat", padx=10, pady=10)
+        txt = tk.Text(main, wrap="word", font=fonts["normal"], bg="#F5F5F5", relief="flat", padx=10, pady=10)
         txt.insert("1.0", content)
         txt.config(state="disabled")
         txt.pack(fill="both", expand=True)
@@ -204,10 +232,9 @@ class HelpPopup:
         y = parent.winfo_rooty() + (parent.winfo_height() // 2) - (h // 2)
         self.top.geometry(f"+{x}+{y}")
 
-def create_help_btn(parent, title, content):
-    """Helper to create a consistent '?' button that launches a HelpPopup."""
+    fonts = get_app_fonts(parent)
     btn = ttk.Label(parent, text="?", background="#E1E1E1", foreground="#666666", 
-                    font=("System", 9, "bold"), cursor="hand2", padding=(4, 0))
+                    font=fonts["small"], cursor="hand2", padding=(4, 0))
     btn.bind("<Button-1>", lambda e: HelpPopup(parent.winfo_toplevel(), title, content))
     return btn
 
@@ -220,9 +247,10 @@ class CloudExplorerPopup:
         self.top = tk.Toplevel(parent)
         self.top.title("GitHub 구름 탐색기")
         
-        scaling = parent.tk.call('tk', 'scaling')
-        w = int(500 * (scaling / 1.33))
-        h = int(600 * (scaling / 1.33))
+        # Scale geometry based on DPI
+        sf = get_scaling_factor(parent)
+        w = int(500 * sf)
+        h = int(600 * sf)
         self.top.geometry(f"{w}x{h}")
         
         self.top.transient(parent)
@@ -234,9 +262,10 @@ class CloudExplorerPopup:
         main = ttk.Frame(self.top, padding=20)
         main.pack(fill="both", expand=True)
 
+        fonts = get_app_fonts(self.top)
         header = ttk.Frame(main)
         header.pack(fill="x", pady=(0, 15))
-        ttk.Label(header, text="☁️ 업로드된 파일 모아보기", font=("System", 12, "bold")).pack(side="left")
+        ttk.Label(header, text="☁️ 업로드된 파일 모아보기", font=fonts["h2"]).pack(side="left")
         ttk.Button(header, text="새로고침", command=self.load_data, width=10).pack(side="right")
 
         # Treeview

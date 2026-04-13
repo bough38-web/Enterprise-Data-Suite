@@ -80,12 +80,17 @@ class MatchTab(ttk.Frame):
         # All widgets now go to self.sidebar.scrollable_frame
         sf = self.sidebar.scrollable_frame
         # Increased padding for a more spacious, premium feel
-        p_frame = ttk.Frame(sf, padding=(25, 20, 25, 25))
+        p_frame = ttk.Frame(sf, padding=(15, 10, 15, 15))
         p_frame.pack(fill="both", expand=True)
 
-        # 2. Data Source
-        load_lf = ttk.LabelFrame(p_frame, text="데이터 소스", padding=10, labelanchor="n")
-        load_lf.pack(fill="x", pady=(0, 10))
+        # 1. Title & Branding (More Compact)
+        header = ttk.Frame(p_frame, padding=(0, 0, 0, 10))
+        header.pack(fill="x")
+        ttk.Label(header, text="✨ Smart Matrix & Match", font=self.fonts.get("h1"), foreground="#0078D4").pack(side="left")
+
+        # 2. Source Selection (Condensed Padding)
+        load_lf = ttk.LabelFrame(p_frame, text="입력 소스 관리", padding=12, labelanchor="n")
+        load_lf.pack(fill="x", pady=(0, 12))
         create_help_btn(load_lf, "데이터 소스 가이드", 
             "- 활성 엑셀: 현재 열려있는 엑셀 창에서 데이터를 가져옵니다.\n"
             "- 원본 파일: 추출 및 매칭을 할 주 데이터를 선택합니다.\n"
@@ -105,12 +110,12 @@ class MatchTab(ttk.Frame):
         ttk.Label(load_lf, textvariable=self.info_var, foreground="#4A90E2").pack(pady=5, anchor="center")
 
         # 3. Cloud Source (GitHub Raw)
-        cloud_lf = ttk.LabelFrame(p_frame, text="클라우드 소스 (GitHub Raw)", padding=15, labelanchor="n")
-        cloud_lf.pack(fill="x", pady=(10, 20))
+        cloud_lf = ttk.LabelFrame(p_frame, text="클라우드 소스 (GitHub Raw)", padding=12, labelanchor="n")
+        cloud_lf.pack(fill="x", pady=(0, 15))
         
         cloud_title_frame = ttk.Frame(cloud_lf)
         cloud_title_frame.pack(fill="x", pady=(0, 5))
-        ttk.Label(cloud_title_frame, text="GitHub 연동 설정", font=("System", 9, "bold")).pack(side="left")
+        ttk.Label(cloud_title_frame, text="GitHub 연동 설정", font=self.fonts.get("h2")).pack(side="left")
         
         btn_grp_c = ttk.Frame(cloud_title_frame)
         btn_grp_c.pack(side="right")
@@ -140,12 +145,12 @@ class MatchTab(ttk.Frame):
         ttk.Button(c_btns, text="선택 다운로드", command=self.download_cloud).pack(side="left", expand=True, fill="x", padx=2)
 
         # 4. Google Sheets Source
-        gs_lf = ttk.LabelFrame(p_frame, text="구글 스프레드시트 연동", padding=15, labelanchor="n")
-        gs_lf.pack(fill="x", pady=(10, 20))
+        gs_lf = ttk.LabelFrame(p_frame, text="구글 스프레드시트 연동", padding=12, labelanchor="n")
+        gs_lf.pack(fill="x", pady=(0, 15))
         
         gs_title_frame = ttk.Frame(gs_lf)
         gs_title_frame.pack(fill="x", pady=(0, 5))
-        ttk.Label(gs_title_frame, text="Google Sheets 설정", font=("System", 9, "bold")).pack(side="left")
+        ttk.Label(gs_title_frame, text="Google Sheets 설정", font=self.fonts.get("h2")).pack(side="left")
         
         btn_grp_g = ttk.Frame(gs_title_frame)
         btn_grp_g.pack(side="right")
@@ -195,8 +200,8 @@ class MatchTab(ttk.Frame):
         ttk.Checkbutton(opt_lf, text="직접 파일 저장", variable=self.direct_save).pack(fill="x", pady=5)
 
         # 6. Filters
-        filter_lf = ttk.LabelFrame(p_frame, text="조건 필터 관리", padding=10, labelanchor="n")
-        filter_lf.pack(fill="x", pady=(0, 10), expand=True)
+        filter_lf = ttk.LabelFrame(p_frame, text="조건 필터 관리", padding=12, labelanchor="n")
+        filter_lf.pack(fill="x", pady=(0, 12), expand=True)
         
         f_top = ttk.Frame(filter_lf)
         f_top.pack(fill="x")
@@ -219,8 +224,8 @@ class MatchTab(ttk.Frame):
         ttk.Button(f_btns, text="초기화", command=self.clear_all_filters).pack(side="left", padx=2)
 
         # 7. Presets
-        pre_lf = ttk.LabelFrame(p_frame, text="추출 프리셋", padding=10, labelanchor="n")
-        pre_lf.pack(fill="x", pady=(0, 10))
+        pre_lf = ttk.LabelFrame(p_frame, text="추출 프리셋", padding=12, labelanchor="n")
+        pre_lf.pack(fill="x", pady=(0, 12))
         
         pre_top = ttk.Frame(pre_lf)
         pre_top.pack(fill="x")
