@@ -40,7 +40,8 @@ class MatchTab(ttk.Frame):
             "to_lower": tk.BooleanVar(value=False),
             "mask_id": tk.BooleanVar(value=False),
             "extract_email": tk.BooleanVar(value=False),
-            "remove_special_chars": tk.BooleanVar(value=False)
+            "remove_special_chars": tk.BooleanVar(value=False),
+            "normalize_numeric": tk.BooleanVar(value=False)
         }
         # Resolve stable path for presets.json (next to EXE/Script)
         if getattr(sys, 'frozen', False):
@@ -301,6 +302,7 @@ class MatchTab(ttk.Frame):
         add_exp_cb(r2, "이메일 주소만 텍스트에서 강제 추출", "extract_email")
         add_exp_cb(r2, "영문 모두 대문자로 변경", "to_upper")
         add_exp_cb(r2, "특수기호 제거 (알파벳, 글자, 숫자만)", "remove_special_chars")
+        add_exp_cb(r2, "금액/숫자 콤마(,) 제거 및 숫자화", "normalize_numeric")
 
         # 7. Presets
         pre_lf = ttk.LabelFrame(p_frame, text="추출 프리셋", padding=12, labelanchor="n")
@@ -666,38 +668,54 @@ class MatchTab(ttk.Frame):
                 messagebox.showerror("저장 실패", f"설정 파일 저장 중 오류: {e}")
 
     def load_favorite_columns(self):
-        """Check all columns that are in the saved 'favorite_columns' list."""
+        """Check all columns that are in the saved 'favorite_columns' list with EXPERT Smart Matching."""
+        import difflib
+        
         if not self.col_vars:
             messagebox.showinfo("안내", "먼저 데이터를 불러와 컬럼 목록을 활성화해주세요.")
             return
             
         master = self.winfo_toplevel()
-        favs = []
-        if hasattr(master, 'config'):
-            favs = master.config.get('favorite_columns', [])
-            
+        favs = getattr(master, 'config', {}).get('favorite_columns', [])
+        
         if not favs:
             messagebox.showinfo("정보", "저장된 유지컬럼이 없습니다. 먼저 '유지컬럼 덮어쓰기'를 통해 저장해 주세요.")
             return
             
+        self.unselect_all_cols()
         match_count = 0
-        for c, var in self.col_vars.items():
-            if c in favs:
-                var.set(True)
-                match_count += 1
+        all_cols = list(self.col_vars.keys())
+        
+        for fav in favs:
+            # 1. Strict exact match
+            if fav in self.col_vars:
+                if not self.col_vars[fav].get():
+                    self.col_vars[fav].set(True)
+                    match_count += 1
             else:
-                var.set(False)
-                
-        # Fallback to fuzzy match if strict match failed (e.g. slight column name variations in different files)
-        if match_count == 0:
-            for c, var in self.col_vars.items():
-                for f in favs:
-                    if str(f).lower().replace(" ","") in str(c).lower().replace(" ",""):
-                        var.set(True)
+                # 2. Expert Fuzzy Match (using difflib for high precision)
+                close_matches = difflib.get_close_matches(fav, all_cols, n=1, cutoff=0.6)
+                if close_matches:
+                    target = close_matches[0]
+                    if not self.col_vars[target].get():
+                        self.col_vars[target].set(True)
                         match_count += 1
-                        break
-                        
-        messagebox.showinfo("완료", f"데이터 상에서 {match_count}개의 유지컬럼이 자동 선택되었습니다.")
+                else:
+                    # 3. Fallback: case-insensitive/space-stripped contains
+                    fav_clean = str(fav).lower().replace(" ","")
+                    for c in all_cols:
+                        c_clean = str(c).lower().replace(" ","")
+                        if fav_clean in c_clean or c_clean in fav_clean:
+                            if not self.col_vars[c].get():
+                                self.col_vars[c].set(True)
+                                match_count += 1
+                                break
+                
+        if match_count > 0:
+            self.set_info(f"유지컬럼 스마트 로드 완료 ({match_count}건 매칭)")
+            messagebox.showinfo("완료", f"데이터 상에서 {match_count}개의 유지컬럼이 스마트 매칭(Fuzzy Match)으로 자동 선택되었습니다.")
+        else:
+            messagebox.showwarning("매칭 실패", "현재 데이터에서 저장된 유지컬럼과 유사한 항목을 찾지 못했습니다.")
 
     def manage_replacements_ui(self):
         """UI to manage find & replace rules."""

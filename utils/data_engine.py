@@ -144,6 +144,7 @@ class DataEngine:
         - "mask_id": 주민/사업자등록번호 마스킹 (뒷부분 별표처리)
         - "extract_email": 문자열 내 이메일 형태만 추출
         - "remove_special_chars": 특수기호 제거 (문자, 숫자만 남김)
+        - "normalize_numeric": 금액/숫자 콤마 제거 및 숫자화
         """
         res = df.copy()
         
@@ -169,6 +170,12 @@ class DataEngine:
                 
             if "remove_special_chars" in options:
                 res[col] = res[col].astype(str).str.replace(r'[^\w\s]', '', regex=True)
+                
+            if "normalize_numeric" in options:
+                # Remove commas, currency symbols, and common Korean suffixes
+                res[col] = res[col].astype(str).str.replace(',', '').str.replace('₩', '').str.replace('원', '')
+                # Try to convert to numeric where possible
+                res[col] = pd.to_numeric(res[col], errors='ignore')
                 
             if "format_phone" in options:
                 def format_num(x):
