@@ -215,9 +215,28 @@ class HelpPopup:
         header.pack(fill="x", pady=(0, 10))
         ttk.Label(header, text=title, font=fonts["h1"], foreground="#0078D4").pack(side="left")
 
-        # Use a text widget for multi-line content
-        txt = tk.Text(main, wrap="word", font=fonts["normal"], bg="#F5F5F5", relief="flat", padx=10, pady=10)
-        txt.insert("1.0", content)
+        # Use a text widget for multi-line content with tag support
+        txt = tk.Text(main, wrap="word", font=fonts["normal"], bg=self.top.cget('bg'), 
+                      fg=fonts.get("fg", "black"), relief="flat", padx=10, pady=10)
+        
+        # Configure tags for basic markdown-like formatting
+        txt.tag_configure("bold", font=(fonts["normal"][0], fonts["normal"][1], "bold"))
+        txt.tag_configure("h3", font=(fonts["normal"][0], fonts["normal"][1]+1, "bold"), foreground="#0078D4")
+        txt.tag_configure("gray", foreground="#666666")
+        
+        # Simple parser for basic formatting
+        lines = content.split('\n')
+        for line in lines:
+            if line.startswith('### '):
+                txt.insert("end", line[4:] + "\n", "h3")
+            elif line.startswith('**') and line.endswith('**'):
+                txt.insert("end", line[2:-2] + "\n", "bold")
+            elif line.startswith('- '):
+                txt.insert("end", "  • ", "gray")
+                txt.insert("end", line[2:] + "\n")
+            else:
+                txt.insert("end", line + "\n")
+                
         txt.config(state="disabled")
         txt.pack(fill="both", expand=True)
 
@@ -232,6 +251,8 @@ class HelpPopup:
         y = parent.winfo_rooty() + (parent.winfo_height() // 2) - (h // 2)
         self.top.geometry(f"+{x}+{y}")
 
+def create_help_btn(parent, title, content):
+    """Helper to create a consistent '?' button that launches a HelpPopup."""
     fonts = get_app_fonts(parent)
     btn = ttk.Label(parent, text="?", background="#E1E1E1", foreground="#666666", 
                     font=fonts["small"], cursor="hand2", padding=(4, 0))

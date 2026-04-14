@@ -196,7 +196,7 @@ class EasyMatchPro(tk.Tk):
             except:
                 self.config = {
                     "locked_features": {"batch_tab": False, "cleaner_tab": False, "cloud_source": False, "google_sheets": False},
-                    "branding": {"name": "EasyMatch", "version": "v3.9 Pro Official", "theme": "dark"},
+                    "branding": {"name": "EasyMatch", "version": "v3.9 Pro Official", "theme": "light"},
                     "telemetry": {"enabled": False, "url": ""},
                     "registered_sources": {"github_url": "", "github_token": "", "google_sheets_url": "", "google_sheet_names": ""}
                 }
@@ -271,42 +271,96 @@ class EasyMatchPro(tk.Tk):
         self.config['branding']['theme'] = theme_name
         
         # Base Theme (Standard sv-ttk as engine)
-        base = "dark" if theme_name in ["dark", "cosmic", "graphite", "ocean", "deep_ocean"] else "light"
+        base = "dark" if theme_name in ["dark", "cosmic", "graphite", "deep_ocean"] else "light"
         sv_ttk.set_theme(base)
-        
-        # Premium Palette Definitions for Sharp Visuals
-        palettes = {
-            "graphite": {"bg": "#121212", "fg": "#FFFFFF", "accent": "#BB86FC", "surface": "#1E1E1E"},
-            "light": {"bg": "#F8F9FA", "fg": "#212529", "accent": "#007AFF", "surface": "#FFFFFF"}, # Alpine/iPhone
-            "cosmic": {"bg": "#0B0E14", "fg": "#E0E0E0", "accent": "#00E5FF", "surface": "#21262D"},
-            "deep_ocean": {"bg": "#0D1B2A", "fg": "#E0E1DD", "accent": "#4FD1C5", "surface": "#1B263B"},
-            "dark": {"bg": "#1E1E1E", "fg": "#FFFFFF", "accent": "#0078D4", "surface": "#252526"}
-        }
-        
-        p = palettes.get(theme_name, palettes["dark"])
         
         # Apply Custom Styling (Expert Techniques)
         style = ttk.Style()
-        style.configure("TLabel", foreground=p["fg"], font=self.fonts["normal"])
-        style.configure("Header.TLabel", font=self.fonts["h1"], foreground=p["accent"])
-        style.configure("TButton", font=self.fonts["normal"])
+        
+        # Configure fonts globally without overriding sv-ttk colors
+        style.configure(".", font=self.fonts["normal"])
+        
+        # Semantic Styles
+        style.configure("Header.TLabel", font=self.fonts["h1"])
+        if theme_name == "cosmic":
+            style.configure("Header.TLabel", foreground="#00E5FF")
+        elif theme_name == "graphite":
+            style.configure("Header.TLabel", foreground="#BB86FC")
+        elif theme_name == "deep_ocean":
+            style.configure("Header.TLabel", foreground="#4FD1C5")
+        elif theme_name == "light":
+            style.configure("Header.TLabel", foreground="#007AFF")
+        else:
+            style.configure("Header.TLabel", foreground="#0078D4")
+            
         style.configure("Accent.TButton", font=self.fonts["h2"])
         
-        # Consistent Labelframe Styling for Density
-        if base == "dark":
-            self.configure(bg=p["bg"])
-            style.configure("TLabelframe", background=p["bg"], foreground=p["accent"])
-            style.configure("TLabelframe.Label", font=self.fonts["h2"], foreground=p["accent"], background=p["bg"])
-        else:
-            self.configure(bg=p["bg"])
-            style.configure("TLabelframe", background=p["bg"], foreground="#000000")
-            style.configure("TLabelframe.Label", font=self.fonts["h2"], foreground="#000000", background=p["bg"])
+        # Labelframe Label Fonts
+        style.configure("TLabelframe.Label", font=self.fonts["h2"])
+        
+        # Luxury Two-Tone Header/Footer styling
+        # 7 Distinct Theme Profiles (Expert Top 7)
+        if theme_name == "light":
+            header_bg = "#F8FAFC" # Brilliant bright gray
+            header_fg = "#0F172A" # Almost black
+            header_sub = "#2563EB" # Royal Blue
+            footer_bg = "#F1F5F9"
+            footer_fg = "#475569"
+        elif theme_name == "cosmic":
+            header_bg = "#2E1065" # Deep violet/purple
+            header_fg = "#FDF8FF" # Bright white
+            header_sub = "#D946EF" # Cyberpunk Pink/Magenta
+            footer_bg = "#3B0764"
+            footer_fg = "#E9D5FF"
+        elif theme_name == "graphite":
+            header_bg = "#334155" # Slate gray
+            header_fg = "#F8FAFC"
+            header_sub = "#F59E0B" # Premium Gold
+            footer_bg = "#1E293B"
+            footer_fg = "#94A3B8"
+        elif theme_name == "dracula":
+            header_bg = "#282A36" # Dracula Dark
+            header_fg = "#F8F8F2" 
+            header_sub = "#FF79C6" # Dracula Pink
+            footer_bg = "#44475A"
+            footer_fg = "#6272A4"
+        elif theme_name == "nord":
+            header_bg = "#2E3440" # Nord Polar Night
+            header_fg = "#ECEFF4" # Nord Snow Storm
+            header_sub = "#88C0D0" # Nord Frost
+            footer_bg = "#3B4252"
+            footer_fg = "#D8DEE9"
+        elif theme_name == "oceanic":
+            header_bg = "#082F49" # Deep Ocean Blue
+            header_fg = "#F0F9FF"
+            header_sub = "#2DD4BF" # Vibrant Teal
+            footer_bg = "#0C4A6E"
+            footer_fg = "#7DD3FC"
+        else: # "dark"
+            header_bg = "#18181B" # Midnight dark
+            header_fg = "#FFFFFF"
+            header_sub = "#00E5FF" # Neon Cyan
+            footer_bg = "#18181B"
+            footer_fg = "#A1A1AA"
+            
+        style.configure("Header.TFrame", background=header_bg)
+        style.configure("Header.TLabel", background=header_bg, foreground=header_fg, font=self.fonts["h1"])
+        style.configure("HeaderSub.TLabel", background=header_bg, foreground=header_sub, font=("System", 11, "bold"))
+        
+        style.configure("Footer.TFrame", background=footer_bg)
+        style.configure("Footer.TLabel", background=footer_bg, foreground=footer_fg, font=("System", 9, "italic"))
+        
+        if hasattr(self, 'theme_menu'):
+            try:
+                self.theme_menu.config(bg=header_bg, fg=header_fg)
+            except: pass
         
         # Expert Fine-tuning for Trees and Notebooks
         style.configure("Treeview", font=self.fonts["small"], rowheight=int(28 * self.scaling_factor))
-        style.configure("TNotebook", background=p["bg"])
         style.configure("TNotebook.Tab", font=self.fonts["normal"], padding=(10, 5))
-        style.configure("TFrame", background=p["bg"])
+        
+        cfg_bg = "#FAFAFA" if base == "light" else "#1c1c1c"
+        self.configure(bg=cfg_bg)
         
         # Propagate to all open Toplevel windows
         for child in self.winfo_children():
@@ -463,32 +517,34 @@ class EasyMatchPro(tk.Tk):
 
 
     def build_ui(self):
-        # Header
-        header_container = ttk.Frame(self, padding=(20, 10))
-        header_container.pack(fill="x")
+        # Header (Luxury Two-Tone)
+        self.header_container = ttk.Frame(self, padding=(20, 10), style="Header.TFrame")
+        self.header_container.pack(fill="x")
         
         # Spacer for centering
-        spacer_l = ttk.Frame(header_container)
+        spacer_l = ttk.Frame(self.header_container, style="Header.TFrame")
         spacer_l.pack(side="left", expand=True)
         
-        header = ttk.Frame(header_container)
+        header = ttk.Frame(self.header_container, style="Header.TFrame")
         header.pack(side="left")
         ttk.Label(header, text="이지매치", style="Header.TLabel").pack(side="left")
-        ttk.Label(header, text="EasyMatch Pro", foreground="#00E5FF", font=("System", 11, "bold")).pack(side="left", padx=10, pady=(5,0))
+        ttk.Label(header, text="EasyMatch Pro", style="HeaderSub.TLabel").pack(side="left", padx=10, pady=(5,0))
         
         # Right aligned buttons
-        btn_frame = ttk.Frame(header_container)
+        btn_frame = ttk.Frame(self.header_container, style="Header.TFrame")
         btn_frame.pack(side="left", expand=True, anchor="e")
         
-        # Theme Dropdown
-        theme_menu = tk.Menubutton(btn_frame, text="THEME ▼", relief="flat", font=("System", 9), direction="below")
-        theme_menu.menu = tk.Menu(theme_menu, tearoff=0)
-        theme_menu["menu"] = theme_menu.menu
+        # Theme Dropdown (Dynamic colors handled in apply_theme)
+        self.theme_menu = tk.Menubutton(btn_frame, text="THEME ▼", relief="flat", font=("System", 9), direction="below")
+        self.theme_menu.menu = tk.Menu(self.theme_menu, tearoff=0)
+        self.theme_menu["menu"] = self.theme_menu.menu
         
-        for t in ["Dark", "Light", "Cosmic", "Graphite"]:
-            theme_menu.menu.add_command(label=t, command=lambda x=t.lower(): self.apply_theme(x))
+        # 7 Expert Themes
+        theme_options = ["Dark", "Light", "Cosmic", "Graphite", "Dracula", "Nord", "Oceanic"]
+        for t in theme_options:
+            self.theme_menu.menu.add_command(label=t, command=lambda x=t.lower(): self.apply_theme(x))
         
-        theme_menu.pack(side="left", padx=5)
+        self.theme_menu.pack(side="left", padx=5)
         ttk.Button(btn_frame, text="ADMIN", width=7, command=self.open_admin_settings).pack(side="left", padx=5)
 
 
@@ -515,15 +571,15 @@ class EasyMatchPro(tk.Tk):
 
         self.tab_match.register_on_load(self.on_data_loaded)
 
-        # Footer & Pulse System
-        footer = ttk.Frame(self, padding=(20, 10))
-        footer.pack(fill="x", side="bottom")
+        # Footer & Pulse System (Two-Tone Footer)
+        self.footer = ttk.Frame(self, padding=(20, 10), style="Footer.TFrame")
+        self.footer.pack(fill="x", side="bottom")
         
         # Pulse (Satisfaction) Bar
-        pulse_frame = ttk.Frame(footer)
+        pulse_frame = ttk.Frame(self.footer, style="Footer.TFrame")
         pulse_frame.pack(side="left")
         
-        ttk.Label(pulse_frame, text="EasyMatch Pulse:", font=("System", 9, "italic")).pack(side="left", padx=(0, 10))
+        ttk.Label(pulse_frame, text="EasyMatch Pulse:", style="Footer.TLabel").pack(side="left", padx=(0, 10))
         
         self.like_btn = ttk.Button(pulse_frame, text="LIKE", width=10, command=self.send_pulse_like)
         self.like_btn.pack(side="left", padx=2)

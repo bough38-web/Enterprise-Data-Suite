@@ -109,6 +109,100 @@ class DataEngine:
             return df.drop(columns=[c for c in columns if c in df.columns], errors='ignore')
 
     @staticmethod
+    def apply_replacements(df, replacements):
+        """
+        replacements: list of dicts like [{'column': 'ColA', 'find': 'old', 'replace': 'new', 'exact': False}]
+        """
+        res = df.copy()
+        for rule in replacements:
+            col = rule['column']
+            if col in res.columns:
+                find_str = str(rule['find'])
+                replace_str = str(rule['replace'])
+                is_exact = rule.get('exact', False)
+                
+                if is_exact:
+                    # Exact cell match
+                    res[col] = res[col].replace(find_str, replace_str)
+                else:
+                    # Substring match (regex)
+                    res[col] = res[col].astype(str).str.replace(find_str, replace_str, regex=True)
+        return res
+
+    @staticmethod
+    def apply_expert_filters(df, options):
+        """
+        options: list of string keys mapped to expert functions.
+        Supported options:
+        - "trim_whitespace": 앞뒤 공백 제거
+        - "remove_all_whitespace": 모든 공백 제거
+        - "format_phone": 전화번호 하이픈(-) 포맷 통일 (010-XXXX-XXXX)
+        - "drop_duplicates": (전체) 중복 행 제거
+        - "drop_empty_rows": 모든 컬럼이 비어있는 행 제거
+        - "to_upper": 영문 대문자로 통일
+        - "to_lower": 영문 소문자로 통일
+        - "mask_id": 주민/사업자등록번호 마스킹 (뒷부분 별표처리)
+        - "extract_email": 문자열 내 이메일 형태만 추출
+        - "remove_special_chars": 특수기호 제거 (문자, 숫자만 남김)
+        """
+        res = df.copy()
+        
+        # Row level operations first
+        if "drop_empty_rows" in options:
+            res.dropna(how='all', inplace=True)
+        if "drop_duplicates" in options:
+            res.drop_duplicates(inplace=True)
+            
+        # Column iterations for text manipulations
+        text_cols = res.select_dtypes(include=['object', 'string']).columns
+        
+        for col in text_cols:
+            if "remove_all_whitespace" in options:
+                res[col] = res[col].astype(str).str.replace(r'\s+', '', regex=True)
+            elif "trim_whitespace" in options:
+                res[col] = res[col].astype(str).str.strip()
+                
+            if "to_upper" in options:
+                res[col] = res[col].astype(str).str.upper()
+            if "to_lower" in options:
+                res[col] = res[col].astype(str).str.lower()
+                
+            if "remove_special_chars" in options:
+                res[col] = res[col].astype(str).str.replace(r'[^\w\s]', '', regex=True)
+                
+            if "format_phone" in options:
+                def format_num(x):
+                    s = re.sub(r'\D', '', str(x))
+                    if len(s) == 11 and s.startswith('010'):
+                        return f"{s[:3]}-{s[3:7]}-{s[7:]}"
+                    elif len(s) == 10 and s.startswith('01'):
+                        return f"{s[:3]}-{s[3:6]}-{s[6:]}"
+                    return x
+                res[col] = res[col].apply(format_num)
+                
+            if "mask_id" in options:
+                # 주민등록번호: 6자리-7자리 -> 뒷 6자리 마스킹
+                # 사업자: 3자리-2자리-5자리 -> 뒷 5자리 마스킹
+                def mask_ids(val):
+                    val = str(val)
+                    val = re.sub(r'(\d{6})[-]?(\d)[0-9]{6}', r'\1-\2******', val)
+                    val = re.sub(r'(\d{3})[-]?(\d{2})[-]?\d{5}', r'\1-\2-*****', val)
+                    return val
+                res[col] = res[col].apply(mask_ids)
+                
+            if "extract_email" in options:
+                def get_email(x):
+                    match = re.search(r'[\w\.-]+@[\w\.-]+', str(x))
+                    return match.group(0) if match else x
+                res[col] = res[col].apply(get_email)
+                
+        # Clean up possible "nan" string artifacts introduced by str conversions
+        res.replace("nan", np.nan, inplace=True)
+        res.replace("None", np.nan, inplace=True)
+        
+        return res
+
+    @staticmethod
     def add_source_info(df, path):
         """Add a column with the source file path/name."""
         res = df.copy()

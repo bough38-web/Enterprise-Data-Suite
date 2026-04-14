@@ -28,6 +28,20 @@ class MatchTab(ttk.Frame):
         self.right_path = "None"
         self.col_vars = {}
         self.active_filters = []
+        self.replacements = [] # [{'column': c, 'find': a, 'replace': b, 'exact': True}]
+        
+        self.expert_options = {
+            "trim_whitespace": tk.BooleanVar(value=True),
+            "remove_all_whitespace": tk.BooleanVar(value=False),
+            "format_phone": tk.BooleanVar(value=False),
+            "drop_duplicates": tk.BooleanVar(value=False),
+            "drop_empty_rows": tk.BooleanVar(value=True),
+            "to_upper": tk.BooleanVar(value=False),
+            "to_lower": tk.BooleanVar(value=False),
+            "mask_id": tk.BooleanVar(value=False),
+            "extract_email": tk.BooleanVar(value=False),
+            "remove_special_chars": tk.BooleanVar(value=False)
+        }
         # Resolve stable path for presets.json (next to EXE/Script)
         if getattr(sys, 'frozen', False):
             base_path = os.path.dirname(sys.executable)
@@ -45,6 +59,17 @@ class MatchTab(ttk.Frame):
         # Cloud Integration State
         self.cloud_headers = []
         
+        # Fallback fonts if not available from master
+        try:
+            self.fonts = self.winfo_toplevel().fonts
+        except AttributeError:
+            self.fonts = {
+                "h1": ("System", 14, "bold"),
+                "h2": ("System", 11, "bold"),
+                "normal": ("System", 9),
+                "small": ("System", 8)
+            }
+            
         self.build_ui()
         self.load_registered_sources()
         self.load_presets_list()
@@ -75,12 +100,16 @@ class MatchTab(ttk.Frame):
         # horizontal=True for horizontal scrolling at the bottom
         self.sidebar = ScrollableFrame(ctrl_frame, horizontal=True)
         self.sidebar.pack(fill="both", expand=True)
-        self.sidebar.canvas.config(width=380) # Increased width for comfort
+        
+        # Increase width significantly for macOS to fit buttons beautifully
+        is_mac = sys.platform == "darwin"
+        sidebar_width = 460 if is_mac else 420
+        self.sidebar.canvas.config(width=sidebar_width)
         
         # All widgets now go to self.sidebar.scrollable_frame
         sf = self.sidebar.scrollable_frame
         # Increased padding for a more spacious, premium feel
-        p_frame = ttk.Frame(sf, padding=(15, 10, 15, 15))
+        p_frame = ttk.Frame(sf, padding=(20, 15, 20, 20))
         p_frame.pack(fill="both", expand=True)
 
         # 1. Title & Branding (More Compact)
@@ -98,9 +127,10 @@ class MatchTab(ttk.Frame):
         
         def add_load_row(parent, text, cmd, upload_type):
             row = ttk.Frame(parent)
-            row.pack(fill="x", pady=2)
+            row.pack(fill="x", pady=3)
+            # Use fixed width for the cloud button, remaining space for primary button
+            ttk.Button(row, text="(Cloud)", width=9, command=lambda: self.secure_upload_handler(upload_type)).pack(side="right", padx=(6, 0))
             ttk.Button(row, text=text, command=cmd).pack(side="left", expand=True, fill="x")
-            ttk.Button(row, text="(Cloud)", width=8, command=lambda: self.secure_upload_handler(upload_type)).pack(side="right", padx=(5, 0))
 
         add_load_row(load_lf, "활성 엑셀 연동", self.load_active, 'active')
         add_load_row(load_lf, "원본 파일 열기", lambda: self.load_file('left'), 'left')
@@ -119,14 +149,25 @@ class MatchTab(ttk.Frame):
         
         btn_grp_c = ttk.Frame(cloud_title_frame)
         btn_grp_c.pack(side="right")
-        ttk.Button(btn_grp_c, text="📂 탐색", width=6, command=self.open_cloud_explorer).pack(side="left", padx=2)
-        ttk.Button(btn_grp_c, text="수정", width=5, command=lambda: self.unlock_source_config('github')).pack(side="left", padx=2)
-        ttk.Button(btn_grp_c, text="저장", width=5, command=lambda: self.save_source_config('github')).pack(side="left", padx=2)
+        ttk.Button(btn_grp_c, text="📂 탐색", width=8, command=self.open_cloud_explorer).pack(side="left", padx=2)
+        ttk.Button(btn_grp_c, text="수정", width=6, command=lambda: self.unlock_source_config('github')).pack(side="left", padx=2)
+        ttk.Button(btn_grp_c, text="저장", width=6, command=lambda: self.save_source_config('github')).pack(side="left", padx=2)
         
-        create_help_btn(cloud_lf, "클라우드 가이드", 
-            "- GitHub Raw URL을 입력하세요.\n"
-            "- '헤더 확인' 후 필요한 컬럼만 선택하여 다운로드할 수 있습니다.\n"
-            "- Private 저장소라면 Token이 필요합니다.").place(relx=1.0, x=-5, y=-5, anchor="ne")
+        create_help_btn(cloud_lf, "전용 클라우드 매뉴얼 (GitHub)", 
+            "### 1. GitHub 저장소 준비\n"
+            "- GitHub.com 로그인 후 새로운 저장소(Repository)를 생성합니다.\n"
+            "- 보안을 위해 'Private' 설정을 권장합니다.\n\n"
+            "### 2. 액세스 토큰 (PAT) 발급 및 등록\n"
+            "- Settings > Developer Settings > Personal Access Tokens (classic) 선택\n"
+            "- 필요한 권한(Scopes): **repo** (Private 저장소 접근 시 필수) 체크\n"
+            "- 생성된 토큰을 앱의 [GitHub Token] 입력란에 저장하세요.\n\n"
+            "### 3. 클라우드 연동 및 워크플로우\n"
+            "- **업로드**: 추출 완료 후 결과 창의 [Cloud 업로드] 버튼으로 결과를 전송합니다.\n"
+            "- **탐색 및 로드**: [📂 탐색] 버튼을 눌러 날짜별로 업로드된 파일을 확인하세요.\n"
+            "- **데이터 활용**: 탐색기에서 데이터 더블클릭 -> [헤더 확인] -> [선택 다운로드]\n\n"
+            "### 4. 주의사항\n"
+            "- GitHub Raw URL은 'https://raw.githubusercontent.com/...' 형식을 권장합니다.\n"
+            "- '탐색기'를 사용하면 주소를 수동으로 딸 필요 없이 자동 입력됩니다.").place(relx=1.0, x=-5, y=-5, anchor="ne")
         
         self.cloud_url = tk.StringVar()
         self.cloud_token = tk.StringVar()
@@ -140,9 +181,9 @@ class MatchTab(ttk.Frame):
         self.ent_c_token.pack(fill="x", pady=2)
         
         c_btns = ttk.Frame(cloud_lf)
-        c_btns.pack(fill="x", pady=(8, 0))
-        ttk.Button(c_btns, text="헤더 확인", command=self.peek_cloud).pack(side="left", expand=True, fill="x", padx=2)
-        ttk.Button(c_btns, text="선택 다운로드", command=self.download_cloud).pack(side="left", expand=True, fill="x", padx=2)
+        c_btns.pack(fill="x", pady=(10, 2))
+        ttk.Button(c_btns, text="헤더 확인", command=self.peek_cloud).pack(side="left", expand=True, fill="x", padx=4)
+        ttk.Button(c_btns, text="선택 다운로드", command=self.download_cloud).pack(side="left", expand=True, fill="x", padx=4)
 
         # 4. Google Sheets Source
         gs_lf = ttk.LabelFrame(p_frame, text="구글 스프레드시트 연동", padding=12, labelanchor="n")
@@ -154,8 +195,8 @@ class MatchTab(ttk.Frame):
         
         btn_grp_g = ttk.Frame(gs_title_frame)
         btn_grp_g.pack(side="right")
-        ttk.Button(btn_grp_g, text="수정", width=5, command=lambda: self.unlock_source_config('google')).pack(side="left", padx=2)
-        ttk.Button(btn_grp_g, text="저장", width=5, command=lambda: self.save_source_config('google')).pack(side="left", padx=2)
+        ttk.Button(btn_grp_g, text="수정", width=6, command=lambda: self.unlock_source_config('google')).pack(side="left", padx=2)
+        ttk.Button(btn_grp_g, text="저장", width=6, command=lambda: self.save_source_config('google')).pack(side="left", padx=2)
         
         create_help_btn(gs_lf, "구글 시트 가이드", 
             "- 시트 주소를 입력하세요.\n"
@@ -173,10 +214,10 @@ class MatchTab(ttk.Frame):
         self.ent_g_names.pack(fill="x", pady=2)
         
         gs_btns = ttk.Frame(gs_lf)
-        gs_btns.pack(fill="x", pady=(8, 0))
-        ttk.Button(gs_btns, text="시트 목록", command=self.fetch_google_sheets).pack(side="left", expand=True, fill="x", padx=2)
-        ttk.Button(gs_btns, text="헤더 확인", command=self.peek_google).pack(side="left", expand=True, fill="x", padx=2)
-        ttk.Button(gs_btns, text="선택 다운로드", command=self.download_google).pack(side="left", expand=True, fill="x", padx=2)
+        gs_btns.pack(fill="x", pady=(10, 2))
+        ttk.Button(gs_btns, text="시트 목록", command=self.fetch_google_sheets).pack(side="left", expand=True, fill="x", padx=3)
+        ttk.Button(gs_btns, text="헤더 확인", command=self.peek_google).pack(side="left", expand=True, fill="x", padx=3)
+        ttk.Button(gs_btns, text="선택 다운로드", command=self.download_google).pack(side="left", expand=True, fill="x", padx=3)
 
         # 5. Options
         opt_lf = ttk.LabelFrame(p_frame, text="추출 옵션", padding=10, labelanchor="n")
@@ -223,6 +264,44 @@ class MatchTab(ttk.Frame):
         ttk.Button(f_btns, text="삭제", command=self.remove_filter_rule).pack(side="left", padx=2)
         ttk.Button(f_btns, text="초기화", command=self.clear_all_filters).pack(side="left", padx=2)
 
+        # 6-1. Replace Rules (치환 기능)
+        rep_lf = ttk.LabelFrame(p_frame, text="값 치환 및 변경", padding=12, labelanchor="n")
+        rep_lf.pack(fill="x", pady=(0, 12), expand=True)
+        
+        ttk.Label(rep_lf, text="특정 값을 찾아 다른 값으로 일괄 변경합니다.").pack(anchor="w", pady=(0,5))
+        
+        # Add a button to open a replacement management popup (since it's complex)
+        ttk.Button(rep_lf, text="🔠 치환 규칙 관리", command=self.manage_replacements_ui).pack(fill="x", pady=2)
+        
+        self.rep_count_var = tk.StringVar(value="현재 규칙: 0 개")
+        ttk.Label(rep_lf, textvariable=self.rep_count_var).pack(pady=2)
+
+        # 6-2. Expert Data Cleaning Options
+        exp_lf = ttk.LabelFrame(p_frame, text="💡 전문가 데이터 클리닝 (Expert)", padding=12, labelanchor="n")
+        exp_lf.pack(fill="x", pady=(0, 12), expand=True)
+        
+        create_help_btn(exp_lf, "전문가 기법 안내", 
+            "데이터를 자동으로 정제해주는 고급 기능들입니다.\n클릭 한 번으로 복잡한 엑셀 수식을 대체할 수 있습니다.").place(relx=1.0, x=-5, y=-5, anchor="ne")
+
+        def add_exp_cb(parent, text, var_key):
+            ttk.Checkbutton(parent, text=text, variable=self.expert_options[var_key]).pack(anchor="w", pady=2)
+            
+        r1 = ttk.Frame(exp_lf)
+        r1.pack(fill="x")
+        r2 = ttk.Frame(exp_lf)
+        r2.pack(fill="x", pady=(5,0))
+        
+        add_exp_cb(r1, "앞뒤 공백 무조건 제거", "trim_whitespace")
+        add_exp_cb(r1, "모든 공백 제거 (사이 띄어쓰기 포함)", "remove_all_whitespace")
+        add_exp_cb(r1, "전화번호 하이픈(-) 010 자동 포맷", "format_phone")
+        add_exp_cb(r1, "비어있는 줄(Empty) 자동 삭제", "drop_empty_rows")
+        add_exp_cb(r1, "중복 데이터(행) 무조건 삭제", "drop_duplicates")
+        
+        add_exp_cb(r2, "주민번호/사업자번호 별표(*) 마스킹", "mask_id")
+        add_exp_cb(r2, "이메일 주소만 텍스트에서 강제 추출", "extract_email")
+        add_exp_cb(r2, "영문 모두 대문자로 변경", "to_upper")
+        add_exp_cb(r2, "특수기호 제거 (알파벳, 글자, 숫자만)", "remove_special_chars")
+
         # 7. Presets
         pre_lf = ttk.LabelFrame(p_frame, text="추출 프리셋", padding=12, labelanchor="n")
         pre_lf.pack(fill="x", pady=(0, 12))
@@ -238,13 +317,26 @@ class MatchTab(ttk.Frame):
         ttk.Button(pre_top, text="(Sync)", command=self.sync_presets, width=6).pack(side="left", padx=2)
 
         pre_btns = ttk.Frame(pre_lf)
-        pre_btns.pack(fill="x", pady=(5, 0))
-        ttk.Button(pre_btns, text="+ 저장", command=self.save_current_preset).pack(side="left", expand=True, fill="x", padx=2)
-        ttk.Button(pre_btns, text="관리", command=self.manage_presets_ui).pack(side="left", expand=True, fill="x", padx=2)
+        pre_btns.pack(fill="x", pady=(8, 2))
+        ttk.Button(pre_btns, text="+ 새 프리셋 저장", command=self.save_current_preset).pack(side="left", expand=True, fill="x", padx=4)
+        ttk.Button(pre_btns, text="프리셋 관리", command=self.manage_presets_ui).pack(side="left", expand=True, fill="x", padx=4)
 
         # 8. Column Selection (Right Pane - Not in scrollable area)
         col_frame = ttk.LabelFrame(self, text="컬럼 선택", padding=10, labelanchor="n")
         col_frame.pack(side="right", fill="both", expand=True, padx=(10, 0))
+        
+        # 8-1. Quick Favorite Columns (유지컬럼)
+        fav_frame = ttk.Frame(col_frame)
+        fav_frame.pack(fill="x", pady=(0, 10))
+        ttk.Label(fav_frame, text="⭐ 단골 컬럼 (유지컬럼) 스마트 선택", font=self.fonts.get("h2")).pack(side="left")
+        
+        fb = ttk.Frame(fav_frame)
+        fb.pack(side="right")
+        
+        ttk.Button(fb, text="★ 저장된 유지컬럼 자동 체크", command=self.load_favorite_columns, style="Accent.TButton").pack(side="left", padx=2)
+        ttk.Button(fb, text="현재 체크된 컬럼을 유지컬럼으로 덮어쓰기", command=self.save_favorite_columns).pack(side="left", padx=2)
+            
+        ttk.Separator(col_frame, orient="horizontal").pack(fill="x", pady=(0,5))
         
         self.scroll_frame = ScrollableFrame(col_frame, horizontal=True)
         self.scroll_frame.pack(fill="both", expand=True)
@@ -553,6 +645,128 @@ class MatchTab(ttk.Frame):
         ttk.Button(popup, text="삭제", command=delete_selected).pack(fill="x", padx=10, pady=10)
         ttk.Button(popup, text="닫기", command=popup.destroy).pack(fill="x", padx=10, pady=(0, 10))
 
+    def toggle_fav_col(self, col_name):
+        pass # Replaced by load_favorite_columns / save_favorite_columns
+
+    def save_favorite_columns(self):
+        """Save currently checked columns to config as 'favorite_columns'."""
+        current_cols = [c for c, v in self.col_vars.items() if v.get()]
+        if not current_cols:
+            messagebox.showwarning("오류", "선택된 컬럼이 없습니다.")
+            return
+            
+        master = self.winfo_toplevel()
+        if hasattr(master, 'config'):
+            master.config['favorite_columns'] = current_cols
+            try:
+                with open(self.config_path, 'w', encoding='utf-8') as f:
+                    json.dump(master.config, f, indent=4, ensure_ascii=False)
+                messagebox.showinfo("저장 완료", f"현재 선택된 {len(current_cols)}개의 컬럼이 '유지컬럼'으로 영구 저장되었습니다.\n\n[저장된 목록]\n{', '.join(current_cols)}")
+            except Exception as e:
+                messagebox.showerror("저장 실패", f"설정 파일 저장 중 오류: {e}")
+
+    def load_favorite_columns(self):
+        """Check all columns that are in the saved 'favorite_columns' list."""
+        if not self.col_vars:
+            messagebox.showinfo("안내", "먼저 데이터를 불러와 컬럼 목록을 활성화해주세요.")
+            return
+            
+        master = self.winfo_toplevel()
+        favs = []
+        if hasattr(master, 'config'):
+            favs = master.config.get('favorite_columns', [])
+            
+        if not favs:
+            messagebox.showinfo("정보", "저장된 유지컬럼이 없습니다. 먼저 '유지컬럼 덮어쓰기'를 통해 저장해 주세요.")
+            return
+            
+        match_count = 0
+        for c, var in self.col_vars.items():
+            if c in favs:
+                var.set(True)
+                match_count += 1
+            else:
+                var.set(False)
+                
+        # Fallback to fuzzy match if strict match failed (e.g. slight column name variations in different files)
+        if match_count == 0:
+            for c, var in self.col_vars.items():
+                for f in favs:
+                    if str(f).lower().replace(" ","") in str(c).lower().replace(" ",""):
+                        var.set(True)
+                        match_count += 1
+                        break
+                        
+        messagebox.showinfo("완료", f"데이터 상에서 {match_count}개의 유지컬럼이 자동 선택되었습니다.")
+
+    def manage_replacements_ui(self):
+        """UI to manage find & replace rules."""
+        popup = tk.Toplevel(self)
+        popup.title("데이터 치환 규칙 관리")
+        popup.geometry("400x500")
+        popup.grab_set()
+        
+        sw = self.winfo_screenwidth()
+        sh = self.winfo_screenheight()
+        popup.geometry(f"400x500+{sw//2-200}+{sh//2-250}")
+        
+        ttk.Label(popup, text="[ 특정 텍스트 일괄 치환 ]", font=self.fonts.get("h2")).pack(pady=10)
+        
+        lb = tk.Listbox(popup, height=8)
+        lb.pack(fill="both", expand=True, padx=10, pady=5)
+        
+        def refresh_list():
+            lb.delete(0, tk.END)
+            for r in self.replacements:
+                m = "정확히 일치" if r.get('exact') else "포함"
+                lb.insert(tk.END, f"[{r['column']}] '{r['find']}' -> '{r['replace']}' ({m})")
+            self.rep_count_var.set(f"현재 규칙: {len(self.replacements)} 개")
+                
+        refresh_list()
+        
+        def delete_rule():
+            sel = lb.curselection()
+            if not sel: return
+            del self.replacements[sel[0]]
+            refresh_list()
+            
+        ttk.Button(popup, text="선택 규칙 삭제", command=delete_rule).pack(fill="x", padx=10, pady=2)
+        ttk.Separator(popup, orient="horizontal").pack(fill="x", pady=10)
+        
+        # Add Area
+        add_f = ttk.Frame(popup, padding=10)
+        add_f.pack(fill="x")
+        
+        ttk.Label(add_f, text="대상 컬럼:").grid(row=0, column=0, sticky="w")
+        col_cbo = ttk.Combobox(add_f, values=list(self.col_vars.keys()), state="readonly")
+        col_cbo.grid(row=0, column=1, sticky="ew", pady=2, padx=5)
+        
+        ttk.Label(add_f, text="찾을 값(A):").grid(row=1, column=0, sticky="w")
+        ent_find = ttk.Entry(add_f)
+        ent_find.grid(row=1, column=1, sticky="ew", pady=2, padx=5)
+        
+        ttk.Label(add_f, text="바꿀 값(B):").grid(row=2, column=0, sticky="w")
+        ent_rep = ttk.Entry(add_f)
+        ent_rep.grid(row=2, column=1, sticky="ew", pady=2, padx=5)
+        
+        exact_var = tk.BooleanVar(value=False)
+        ttk.Checkbutton(add_f, text="셀 전체가 정확히 일치할 때만 변경", variable=exact_var).grid(row=3, column=0, columnspan=2, sticky="w", pady=5)
+        
+        def add_rule():
+            c = col_cbo.get()
+            f = ent_find.get()
+            r = ent_rep.get()
+            if not c or not f:
+                messagebox.showwarning("입력 필요", "컬럼과 찾을 값을 입력하세요.")
+                return
+            self.replacements.append({"column": c, "find": f, "replace": r, "exact": exact_var.get()})
+            refresh_list()
+            ent_find.delete(0, tk.END)
+            ent_rep.delete(0, tk.END)
+            
+        ttk.Button(add_f, text="규칙 추가", command=add_rule, style="Accent.TButton").grid(row=4, column=0, columnspan=2, sticky="ew", pady=10)
+        ttk.Button(popup, text="닫기", command=popup.destroy).pack(fill="x", padx=10, pady=(0, 10))
+
     def run_process(self):
         if self.df_left is None: return
         
@@ -575,6 +789,15 @@ class MatchTab(ttk.Frame):
                 
                 # Apply Filters with Diagnostics
                 df_res, diag = DataEngine.apply_filters(df_res, {"auto_target": self.auto_target.get(), "custom_filters": self.active_filters})
+                
+                # Apply Replacements
+                if self.replacements:
+                    df_res = DataEngine.apply_replacements(df_res, self.replacements)
+                    
+                # Apply Expert Options
+                active_experts = [k for k, v in self.expert_options.items() if v.get()]
+                if active_experts:
+                    df_res = DataEngine.apply_expert_filters(df_res, active_experts)
                 
                 # Select Columns
                 df_res = DataEngine.select_columns(df_res, [c for c, v in self.col_vars.items() if v.get()], self.mode_var.get())
